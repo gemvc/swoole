@@ -55,6 +55,13 @@ class OpenSwooleServer
      */
     private function loadDependencies(): void
     {
+        // Check if autoloader is already loaded (e.g., from index.php)
+        if (class_exists('Composer\Autoload\ClassLoader')) {
+            // Autoloader already loaded, skip loading
+            ProjectHelper::loadEnv();
+            return;
+        }
+
         $autoloaderFound = false;
         $autoloaderPaths = [
             // First priority: for when index.php is in the project root

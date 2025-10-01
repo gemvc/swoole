@@ -9,9 +9,6 @@ LABEL maintainer="GEMVC Team" \
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy composer files first
-COPY composer.json ./
-
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader \
     && composer dump-autoload -o \

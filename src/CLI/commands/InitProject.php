@@ -4,6 +4,12 @@ namespace Gemvc\CLI\Commands;
 
 use Gemvc\CLI\Command;
 
+/**
+ * Initialize a new GEMVC OpenSwoole project
+ * 
+ * This command automatically sets up a new project using the OpenSwoole template
+ * without asking the user to choose between Apache and Swoole templates.
+ */
 class InitProject extends Command
 {
     private string $basePath;
@@ -18,6 +24,8 @@ class InitProject extends Command
         if ($this->nonInteractive) {
             $this->info("Running in non-interactive mode - will automatically accept defaults and overwrite files");
         }
+        
+        $this->info("Initializing GEMVC OpenSwoole project...");
         
         // Determine the project root
         $this->basePath = defined('PROJECT_ROOT') ? PROJECT_ROOT : $this->determineProjectRoot();
@@ -71,7 +79,7 @@ class InitProject extends Command
             // Offer testing framework installation
             $this->offerTestingFrameworkInstallation();
 
-            $this->success("GEMVC project initialized successfully!", true);
+            $this->success("GEMVC OpenSwoole project initialized successfully!", true);
 
         } catch (\Exception $e) {
             $this->error($e->getMessage());
@@ -147,10 +155,10 @@ class InitProject extends Command
             $this->info("File already exists (non-interactive mode): {$envPath} - will be overwritten");
         }
 
-        // Get the template name (apache or swoole)
-        $templateName = $this->templateName ?? 'apache';
+        // This is the OpenSwoole-only version, always use swoole template
+        $templateName = $this->templateName ?? 'swoole';
         
-        // Use the example.env from the selected template
+        // Use the example.env from the swoole template
         $exampleEnvPath = $this->packagePath . '/src/startup/' . $templateName . '/example.env';
         
         if (!file_exists($exampleEnvPath)) {
@@ -195,77 +203,25 @@ class InitProject extends Command
             throw new \RuntimeException("Startup directory not found. Tried: " . implode(", ", $potentialPaths));
         }
         
-        // Check for available templates
-        $templateDirs = [];
-        $dirs = scandir($startupPath);
-        foreach ($dirs as $dir) {
-            if ($dir === '.' || $dir === '..' || $dir === 'user') continue; // Exclude 'user' directory from template options
-            if (is_dir($startupPath . '/' . $dir)) {
-                $templateDirs[] = $dir;
-                $this->info("Found template: {$dir}");
-            }
-        }
+        // This is the OpenSwoole-only version of the library
+        // Always use the 'swoole' template without asking the user
+        $templateName = 'swoole';
+        $templateDir = $startupPath . '/' . $templateName;
         
-        // For non-interactive mode, or if there's just one template, use it directly
-        if (count($templateDirs) === 1 || $this->nonInteractive) {
-            $templateName = $templateDirs[0] ?? null;
-            
-            // In non-interactive mode, prefer apache if available
-            if ($this->nonInteractive && count($templateDirs) > 1) {
-                if (in_array('apache', $templateDirs)) {
-                    $templateName = 'apache';
-                } elseif (in_array('swoole', $templateDirs)) {
-                    $templateName = 'swoole';
-                }
-            }
-            
-            if ($templateName) {
-                $this->info("Using template: {$templateName}");
-                $this->templateName = $templateName;  // Store the template name
-                $templateDir = $startupPath . '/' . $templateName;
-                $this->copyTemplateFiles($templateDir);
-                
-                // Copy user files after template files
-                $this->copyUserFiles($startupPath);
-                return;
-            }
-        }
-        
-        // If we have multiple templates and we're in interactive mode, let the user choose
-        if (count($templateDirs) > 1 && !$this->nonInteractive) {
-            $this->write("\n\033[1;33mAvailable Templates:\033[0m\n", 'yellow');  // Bright yellow header
-            foreach ($templateDirs as $index => $dir) {
-                echo "  [\033[32m{$index}\033[0m] \033[1m{$dir}\033[0m\n";  // Green number, bold template name
-            }
-            echo "\n\033[1;36mEnter choice (number):\033[0m ";  // Bright cyan prompt
-            $handle = fopen("php://stdin", "r");
-            $choice = trim(fgets($handle));
-            fclose($handle);
-            
-            if (isset($templateDirs[(int)$choice])) {
-                $templateName = $templateDirs[(int)$choice];
-                $this->templateName = $templateName;  // Store the template name
-                $templateDir = $startupPath . '/' . $templateName;
-                $this->info("Using template: {$templateName}");
-                $this->copyTemplateFiles($templateDir);
-                
-                // Copy user files after template files
-                $this->copyUserFiles($startupPath);
-                return;
-            } else {
-                throw new \RuntimeException("\033[31mInvalid template choice\033[0m");
-            }
-        }
-        
-        // If there are no template directories, try to use the startup dir itself
-        if (empty($templateDirs)) {
-            $this->info("No specific templates found, using startup directory directly");
-            $this->templateName = 'default';  // Store default template name
+        // Check if swoole template exists
+        if (!is_dir($templateDir)) {
+            // If swoole template doesn't exist, try to use the startup directory directly
+            $this->info("Swoole template not found, using startup directory directly");
+            $this->templateName = 'default';
             $this->copyTemplateFiles($startupPath);
-            
-            // Copy user files after template files
-            $this->copyUserFiles($startupPath);
+        } else {
+            $this->info("Using OpenSwoole template: {$templateName}");
+            $this->templateName = $templateName;  // Store the template name
+            $this->copyTemplateFiles($templateDir);
         }
+        
+        // Copy user files after template files
+        $this->copyUserFiles($startupPath);
     }
     
     private function copyTemplateFiles($templateDir)

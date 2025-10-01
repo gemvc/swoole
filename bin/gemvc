@@ -1,0 +1,197 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * GEMVC Command Line Interface
+ * 
+ * This is the main entry point for all GEMVC commands, both framework and project specific.
+ * It handles command discovery and execution from both the framework and the project.
+ */
+
+// Determine if we're in a project context or framework context
+$possibleAutoloaders = [
+    getcwd() . '/vendor/autoload.php',               // Project root autoloader
+    __DIR__ . '/../vendor/autoload.php',             // Project installation
+    __DIR__ . '/../autoload.php',                    // Framework development
+    __DIR__ . '/../../autoload.php',                 // Alternative project path
+    __DIR__ . '/../../../../autoload.php',           // Composer vendor installation
+    dirname(dirname(dirname(dirname(__DIR__)))) . '/autoload.php'  // Deep vendor installation
+];
+
+$autoloaded = false;
+foreach ($possibleAutoloaders as $autoloader) {
+    if (file_exists($autoloader)) {
+        require_once $autoloader;
+        $autoloaded = true;
+        break;
+    }
+}
+
+if (!$autoloaded) {
+    echo "\033[31mError: Could not find Composer's autoloader.\033[0m\n";
+    echo "Please ensure:\n";
+    echo "1. You have run 'composer install'\n";
+    echo "2. You are running this script from the project root\n";
+    echo "3. The vendor directory exists and is not corrupted\n";
+    echo "\nTried the following paths:\n";
+    foreach ($possibleAutoloaders as $path) {
+        echo "- {$path}\n";
+    }
+    exit(1);
+}
+
+// Basic environment checks for initialization
+function checkEnvironment() {
+    // PHP version check
+    if (version_compare(PHP_VERSION, '8.0.0', '<')) {
+        echo "\033[31mError: GEMVC requires PHP 8.0 or higher.\033[0m\n";
+        echo "Current PHP version: " . PHP_VERSION . "\n";
+        exit(1);
+    }
+
+    // Required extensions
+    $requiredExtensions = ['json', 'pdo', 'mbstring'];
+    $missingExtensions = [];
+    foreach ($requiredExtensions as $ext) {
+        if (!extension_loaded($ext)) {
+            $missingExtensions[] = $ext;
+        }
+    }
+    
+    if (!empty($missingExtensions)) {
+        echo "\033[31mError: Missing required PHP extensions:\033[0m\n";
+        foreach ($missingExtensions as $ext) {
+            echo "- $ext\n";
+        }
+        exit(1);
+    }
+}
+
+// Set up command paths
+$vendorPath = getcwd() . '/vendor';
+$paths = [
+    'framework' => [
+        'commands' => $vendorPath . '/gemvc/library/src/CLI/commands',  // Composer vendor path
+        'namespace' => 'Gemvc\\CLI\\Commands\\'
+    ],
+    'project' => [
+        'commands' => getcwd() . '/app/CLI/commands',
+        'namespace' => 'App\\CLI\\Commands\\'
+    ]
+];
+
+// For development/alternative paths
+if (!is_dir($paths['framework']['commands'])) {
+    $altPaths = [
+        dirname(__DIR__) . '/src/CLI/commands',  // Direct framework development
+        dirname(dirname(__DIR__)) . '/src/CLI/commands',  // Nested framework development
+        dirname(dirname(dirname(__DIR__))) . '/gemvc/library/src/CLI/commands'  // Deep vendor installation
+    ];
+    
+    foreach ($altPaths as $altPath) {
+        if (is_dir($altPath)) {
+            $paths['framework']['commands'] = $altPath;
+            break;
+        }
+    }
+}
+
+// Parse command line arguments
+$command = $argv[1] ?? '--help';
+$args = array_slice($argv, 2);
+
+// Special handling for initialization commands
+if ($command === 'init' || $command === 'setup') {
+    checkEnvironment();
+    
+    // For setup command, validate platform type
+    if ($command === 'setup' && !empty($args)) {
+        $platform = strtolower($args[0]);
+        if (!in_array($platform, ['apache', 'swoole'])) {
+            echo "\033[31mError: Unknown platform type: {$platform}\033[0m\n";
+            echo "Usage: gemvc setup [apache|swoole]\n";
+            exit(1);
+        }
+    }
+}
+
+// Special command mappings
+$commandMappings = [
+    'init' => 'InitProject',
+    // Add more special mappings here if needed
+];
+
+// Convert command format (e.g., create:service -> CreateService)
+$commandParts = explode(':', $command);
+$className = '';
+
+// Check if this is a special command that needs mapping
+if (isset($commandMappings[$command])) {
+    $className = $commandMappings[$command];
+} else {
+    // Standard command name conversion
+    foreach ($commandParts as $part) {
+        $className .= ucfirst(strtolower($part));
+    }
+}
+
+// Try to find and execute the command
+$commandFound = false;
+
+// Debug information for command search
+$debugInfo = [];
+
+foreach ($paths as $context => $config) {
+    $commandClass = $config['namespace'] . $className;
+    $commandFile = $config['commands'] . '/' . $className . '.php';
+    
+    $debugInfo[] = [
+        'context' => $context,
+        'class' => $commandClass,
+        'file' => $commandFile,
+        'exists' => class_exists($commandClass),
+        'className' => $className
+    ];
+    
+    if (class_exists($commandClass)) {
+        try {
+            $commandObj = new $commandClass($args);
+            $commandObj->execute();
+            $commandFound = true;
+            break;
+        } catch (\Exception $e) {
+            echo "\033[31mError: {$e->getMessage()}\033[0m\n";
+            exit(1);
+        }
+    }
+}
+
+if (!$commandFound) {
+    if ($command === '--help' || $command === '-h') {
+        echo "\033[1mGEMVC Framework CLI\033[0m\n\n";
+        echo "Usage: gemvc <command> [options]\n\n";
+        echo "\033[1mProject Initialization:\033[0m\n";
+        echo "  \033[32minit\033[0m                          Initialize a new GEMVC project\n";
+        echo "  \033[32msetup [apache|swoole]\033[0m        Configure project for specific platform\n\n";
+        echo "\033[1mCode Generation:\033[0m\n";
+        echo "  \033[32mcreate:service\033[0m <ServiceName> Create a new service\n";
+        echo "  \033[32mcreate:model\033[0m <ModelName>     Create a new model\n";
+        echo "  \033[32mcreate:table\033[0m <TableName>     Create a new table class\n\n";
+        echo "\033[1mHelp & Information:\033[0m\n";
+        echo "  \033[32m--help\033[0m                       Show this help message\n";
+        echo "  \033[32m--version\033[0m                    Show GEMVC version\n";
+    } else {
+        echo "\033[31mError: Command '$command' not found.\033[0m\n";
+        echo "Run 'gemvc --help' for available commands.\n\n";
+        
+        echo "Debug Information:\n";
+        foreach ($debugInfo as $info) {
+            echo "\nContext: {$info['context']}\n";
+            echo "Class: {$info['class']}\n";
+            echo "File: {$info['file']}\n";
+            echo "Class exists: " . ($info['exists'] ? 'Yes' : 'No') . "\n";
+            echo "Looking for class: " . $info['className'] . "\n";
+        }
+        exit(1);
+    }
+} 

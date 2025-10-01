@@ -1,4 +1,4 @@
-# GEMVC OpenSwoole 0.1.0-pre
+# GEMVC OpenSwoole v0.1.0-pre
 
 ## 🚀 First Pre-Release - Ready for Testing
 
@@ -123,7 +123,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Version**: 0.1.0-pre  
+**Version**: v0.1.0-pre  
 **Release Date**: December 2024  
 **Author**: Ali Khorsandfard  
 **Email**: ali.khorsandfard@gmail.com  

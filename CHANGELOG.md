@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced documentation and tutorials
 - Additional middleware support
 
-## [0.1.0-pre] - 2025-10-01
+## [v0.1.0-pre] - 2025-10-01
 
 ### Added
 - **Initial pre-release** - First public release for community testing

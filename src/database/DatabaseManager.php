@@ -61,6 +61,7 @@ class DatabaseManager
      */
     public function getConnection(string $poolName = 'default'): Connection
     {
+        /** @var Connection $conn */
         $conn = $this->poolFactory->getPool($poolName)->get();
         
         // Verify connection is alive with a lightweight ping

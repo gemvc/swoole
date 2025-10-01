@@ -9,16 +9,13 @@ LABEL maintainer="GEMVC Team" \
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy composer files first
-COPY composer.json ./
+# Copy the rest of the application
+COPY . .
 
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader \
     && composer dump-autoload -o \
     && composer clear-cache
-
-# Copy the rest of the application
-COPY . .
 
 # Expose port
 EXPOSE 9501

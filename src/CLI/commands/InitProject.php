@@ -233,7 +233,7 @@ class InitProject extends Command
             
             // Special handling for OpenSwoole's appIndex.php
             if ($file === 'appIndex.php') {
-                $destPath = $this->basePath . '/app/api/index.php';
+                $destPath = $this->basePath . '/app/api/Index.php';
                 
                 // Create app/api directory if it doesn't exist
                 if (!is_dir(dirname($destPath))) {
@@ -267,7 +267,7 @@ class InitProject extends Command
                 throw new \RuntimeException("Failed to copy file: {$sourcePath} to {$destPath}");
             }
             
-            $this->info("Copied: {$file}" . ($file === 'appIndex.php' ? " to app/api/index.php" : ""));
+            $this->info("Copied: {$file}" . ($file === 'appIndex.php' ? " to app/api/Index.php" : ""));
         }
     }
     

@@ -162,6 +162,14 @@ class QueryExecuter
                  $this->lastInsertedId = $this->db->getPdo()->lastInsertId();
             }
             $this->endExecutionTime = microtime(true);
+            
+            // Auto-release connection for non-SELECT queries if not in transaction
+            // SELECT queries need to keep connection open for fetching
+            if (!$this->inTransaction && stripos(trim($this->query), 'SELECT') !== 0) {
+                $this->statement->closeCursor();
+                $this->releaseConnection();
+            }
+            
             return true;
         } catch (\PDOException $e) {
             $errorDetails = json_encode(['message' => $e->getMessage(), 'code' => $e->getCode(), 'query' => $this->query, 'bindings' => $this->bindings]);

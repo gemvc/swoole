@@ -2,6 +2,7 @@
     "name": "gemvc/swoole",
     "description": "core library of gemvc for swoole",
     "type": "library",
+    "version": "0.1.0-pre",
     "require": {
         "firebase/php-jwt": "^6.8",
         "symfony/dotenv": "^7.2",

@@ -1,0 +1,42 @@
+{
+    "name": "gemvc/swoole",
+    "description": "core library of gemvc for swoole",
+    "type": "library",
+    "require": {
+        "firebase/php-jwt": "^6.8",
+        "symfony/dotenv": "^7.2",
+        "hyperf/db-connection": "^3.1",
+        "hyperf/di": "^3.1",
+        "hyperf/config": "^3.1",
+        "hyperf/utils": "^3.1"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Gemvc\\": "src/",
+            "Gemvc\\Database\\": "src/database/",
+            "Gemvc\\Database\\Query\\": "src/database/query/",
+            "Gemvc\\Helper\\": "src/helper/",
+            "Gemvc\\Http\\": "src/http/",
+            "Gemvc\\Core\\": "src/core/",
+            "Gemvc\\CLI\\": "src/CLI/",
+            "Gemvc\\CLI\\Commands\\": "src/CLI/commands/"
+        },
+        "files": [
+            "src/database/SqlEnumCondition.php"
+        ]
+    },
+    "bin": [
+        "bin/gemvc"
+    ],
+    "authors": [
+        {
+            "name": "Ali Khorsandfard",
+            "email": "ali.khorsandfard@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require-dev": {
+        "phpstan/phpstan": "^2.1"
+    }
+}

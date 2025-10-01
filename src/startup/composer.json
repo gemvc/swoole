@@ -1,9 +1,9 @@
 {
     "name": "my_app/v1",
-    "description": "Super light Framework based on Gemvc Library",
+    "description": "Super light Framework based on Gemvc swoole",
     "type": "library",
     "require": {
-        "gemvc/library": "^4.0",
+        "gemvc/swoole": "dev-main",
         "symfony/dotenv": "^7.0"
     },
     "require-dev": {

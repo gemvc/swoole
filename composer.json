@@ -37,7 +37,7 @@
             "email": "ali.khorsandfard@gmail.com"
         }
     ],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "require-dev": {
         "phpstan/phpstan": "^2.1",
         "phpunit/phpunit": "^10.1"

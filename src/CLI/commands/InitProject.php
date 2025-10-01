@@ -155,19 +155,19 @@ class InitProject extends Command
             $this->info("File already exists (non-interactive mode): {$envPath} - will be overwritten");
         }
 
-        // This is the OpenSwoole-only version, always use swoole template
-        $templateName = $this->templateName ?? 'swoole';
+        // This is the OpenSwoole-only version, use startup directory directly
+        $templateName = $this->templateName ?? 'openswoole';
         
-        // Use the example.env from the swoole template
-        $exampleEnvPath = $this->packagePath . '/src/startup/' . $templateName . '/example.env';
+        // Use the example.env from the startup directory
+        $exampleEnvPath = $this->packagePath . '/src/startup/example.env';
         
         if (!file_exists($exampleEnvPath)) {
-            $this->error("Could not find example.env file for template: {$templateName}");
+            $this->error("Could not find example.env file in startup directory");
             $this->error("Expected path: {$exampleEnvPath}");
-            throw new \RuntimeException("Example .env file not found for template: {$templateName}");
+            throw new \RuntimeException("Example .env file not found in startup directory");
         }
         
-        $this->info("Using example.env from {$templateName} template: {$exampleEnvPath}");
+        $this->info("Using example.env from OpenSwoole startup: {$exampleEnvPath}");
         
         $envContent = file_get_contents($exampleEnvPath);
         if ($envContent === false) {
@@ -204,21 +204,10 @@ class InitProject extends Command
         }
         
         // This is the OpenSwoole-only version of the library
-        // Always use the 'swoole' template without asking the user
-        $templateName = 'swoole';
-        $templateDir = $startupPath . '/' . $templateName;
-        
-        // Check if swoole template exists
-        if (!is_dir($templateDir)) {
-            // If swoole template doesn't exist, try to use the startup directory directly
-            $this->info("Swoole template not found, using startup directory directly");
-            $this->templateName = 'default';
-            $this->copyTemplateFiles($startupPath);
-        } else {
-            $this->info("Using OpenSwoole template: {$templateName}");
-            $this->templateName = $templateName;  // Store the template name
-            $this->copyTemplateFiles($templateDir);
-        }
+        // Use the startup directory directly (no sub-template folders)
+        $this->info("Using OpenSwoole startup template");
+        $this->templateName = 'openswoole';  // Store the template name
+        $this->copyTemplateFiles($startupPath);
         
         // Copy user files after template files
         $this->copyUserFiles($startupPath);
@@ -240,8 +229,8 @@ class InitProject extends Command
             $sourcePath = $templateDir . '/' . $file;
             $destPath = $this->basePath . '/' . $file;
             
-            // Special handling for Swoole's appIndex.php
-            if ($file === 'appIndex.php' && strpos($templateDir, 'swoole') !== false) {
+            // Special handling for OpenSwoole's appIndex.php
+            if ($file === 'appIndex.php') {
                 $destPath = $this->basePath . '/app/api/index.php';
                 
                 // Create app/api directory if it doesn't exist

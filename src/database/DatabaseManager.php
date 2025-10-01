@@ -12,11 +12,16 @@ use Gemvc\Helper\ProjectHelper;
 
 /**
  * Manages the database connection pool for the Gemvc framework.
- * This class is self-contained. It uses ProjectHelper to automatically
- * load its configuration from .env and then builds the config array internally.
+ * This class is self-contained and uses a singleton pattern for OpenSwoole.
+ * It automatically loads configuration from .env and manages the connection pool.
  */
 class DatabaseManager
 {
+    /**
+     * @var DatabaseManager|null Singleton instance for OpenSwoole
+     */
+    private static ?DatabaseManager $instance = null;
+
     /**
      * @var Container The DI container from Hyperf.
      */
@@ -28,12 +33,21 @@ class DatabaseManager
     protected PoolFactory $poolFactory;
 
     /**
-     * The constructor initializes the container and the pool factory.
-     * It's designed to be instantiated once when the server starts.
-     * It automatically finds and loads the necessary configuration.
+     * @var string|null Stores the last error message
      */
-    public function __construct()
+    private ?string $error = null;
+
+    /**
+     * Private constructor to prevent direct instantiation.
+     * Use getInstance() to get the singleton instance.
+     */
+    private function __construct()
     {
+        // Debug: Log when pool is actually created (should only happen once per worker)
+        if (($_ENV['APP_ENV'] ?? '') === 'dev') {
+            error_log("DatabaseManager: Creating new connection pool [Worker PID: " . getmypid() . "]");
+        }
+        
         // Use the helper to load environment variables.
         ProjectHelper::loadEnv();
 
@@ -54,32 +68,114 @@ class DatabaseManager
     }
 
     /**
+     * Get the singleton instance of DatabaseManager.
+     * This ensures only one pool exists per OpenSwoole worker process.
+     * 
+     * @return DatabaseManager The singleton instance
+     */
+    public static function getInstance(): DatabaseManager
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        } else {
+            // Debug: Confirm singleton is being reused
+            if (($_ENV['APP_ENV'] ?? '') === 'dev') {
+                error_log("DatabaseManager: Reusing existing pool [Worker PID: " . getmypid() . "]");
+            }
+        }
+        return self::$instance;
+    }
+
+    /**
+     * Reset the singleton instance (useful for testing).
+     * In production, this should never be called.
+     */
+    public static function resetInstance(): void
+    {
+        self::$instance = null;
+    }
+
+    /**
+     * Get the last error message.
+     * 
+     * @return string|null Error message or null if no error occurred
+     */
+    public function getError(): ?string
+    {
+        return $this->error;
+    }
+
+    /**
+     * Set an error message with optional context.
+     * 
+     * @param string|null $error The error message to set
+     * @param array $context Additional context information
+     */
+    public function setError(?string $error, array $context = []): void
+    {
+        if ($error === null) {
+            $this->error = null;
+            return;
+        }
+        
+        // Add context information to error message
+        if (!empty($context)) {
+            $contextStr = ' [Context: ' . json_encode($context) . ']';
+            $this->error = $error . $contextStr;
+        } else {
+            $this->error = $error;
+        }
+    }
+
+    /**
+     * Clear the error message.
+     */
+    public function clearError(): void
+    {
+        $this->error = null;
+    }
+
+    /**
      * Retrieves a database connection from the specified connection pool.
      *
      * @param string $poolName The name of the connection pool (default: 'default')
      * @return Connection An active database connection object.
      */
-    public function getConnection(string $poolName = 'default'): Connection
+    public function getConnection(string $poolName = 'default'): ?Connection
     {
-        /** @var Connection $conn */
-        $conn = $this->poolFactory->getPool($poolName)->get();
+        $this->clearError();
         
-        // Verify connection is alive with a lightweight ping
         try {
-            $conn->getPdo()->query('SELECT 1');
-        } catch (\Throwable $e) {
-            // Connection is broken, release it and get a new one
-            error_log("Broken connection detected: " . $e->getMessage());
+            /** @var Connection $conn */
+            $conn = $this->poolFactory->getPool($poolName)->get();
+            
+            // Verify connection is alive with a lightweight ping
             try {
-                $conn->release();
-            } catch (\Throwable $releaseError) {
-                error_log("Error releasing broken connection: " . $releaseError->getMessage());
+                $conn->getPdo()->query('SELECT 1');
+            } catch (\Throwable $e) {
+                // Connection is broken, release it and get a new one
+                error_log("Broken connection detected: " . $e->getMessage());
+                try {
+                    $conn->release();
+                } catch (\Throwable $releaseError) {
+                    error_log("Error releasing broken connection: " . $releaseError->getMessage());
+                }
+                // Recursively retry to get a healthy connection
+                return $this->getConnection($poolName);
             }
-            // Recursively retry to get a healthy connection
-            return $this->getConnection($poolName);
+            
+            return $conn;
+        } catch (\Throwable $e) {
+            $context = [
+                'pool' => $poolName,
+                'worker_pid' => getmypid(),
+                'timestamp' => date('Y-m-d H:i:s'),
+                'error_code' => $e->getCode()
+            ];
+            $this->setError('Failed to get database connection: ' . $e->getMessage(), $context);
+            error_log("DatabaseManager::getConnection() - Error: " . $e->getMessage() . " [Pool: $poolName]");
+            return null;
         }
-        
-        return $conn;
     }
 
     /**

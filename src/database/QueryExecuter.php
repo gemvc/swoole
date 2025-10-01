@@ -27,17 +27,35 @@ class QueryExecuter
     /** @var Connection|null The database connection from the Hyperf pool. */
     private ?Connection $db = null;
 
-    /** @var DatabaseManager The manager for the connection pool. */
-    private DatabaseManager $dbManager;
-
     /**
-     * The constructor now accepts a DatabaseManager instance.
-     * @param DatabaseManager $dbManager The database manager that handles the connection pool.
+     * Clean constructor - automatically uses the singleton DatabaseManager.
+     * In OpenSwoole, the DatabaseManager singleton is shared across all requests
+     * within the same worker process, providing efficient connection pooling.
      */
-    public function __construct(DatabaseManager $dbManager)
+    public function __construct()
     {
         $this->startExecutionTime = microtime(true);
-        $this->dbManager = $dbManager;
+        // No parameters needed - connection management is handled internally
+    }
+
+    /**
+     * Get a connection from the pool when needed.
+     * This lazily accesses the DatabaseManager singleton.
+     * 
+     * @param string $poolName The connection pool name (default: 'default')
+     * @return Connection|null A connection from the pool, or null on error
+     */
+    private function getConnection(string $poolName = 'default'): ?Connection
+    {
+        $manager = DatabaseManager::getInstance();
+        $conn = $manager->getConnection($poolName);
+        
+        // Propagate error from DatabaseManager to QueryExecuter
+        if ($conn === null) {
+            $this->setError('Connection error: ' . ($manager->getError() ?? 'Unknown error'));
+        }
+        
+        return $conn;
     }
 
     /**
@@ -66,9 +84,20 @@ class QueryExecuter
         return $this->error;
     }
 
-    public function setError(?string $error): void
+    public function setError(?string $error, array $context = []): void
     {
-        $this->error = $error ?? null;
+        if ($error === null) {
+            $this->error = null;
+            return;
+        }
+        
+        // Add context information to error message
+        if (!empty($context)) {
+            $contextStr = ' [Context: ' . json_encode($context) . ']';
+            $this->error = $error . $contextStr;
+        } else {
+            $this->error = $error;
+        }
     }
 
     /**
@@ -99,7 +128,11 @@ class QueryExecuter
 
         try {
             if (!$this->db) {
-                $this->db = $this->dbManager->getConnection();
+                $this->db = $this->getConnection();
+                if ($this->db === null) {
+                    // Error already set by getConnection()
+                    return;
+                }
             }
             $this->statement = $this->db->getPdo()->prepare($query);
         } catch (Throwable $e) {
@@ -172,10 +205,18 @@ class QueryExecuter
             
             return true;
         } catch (\PDOException $e) {
+            $context = [
+                'query' => $this->query,
+                'bindings' => $this->bindings,
+                'execution_time' => $this->getExecutionTime(),
+                'in_transaction' => $this->inTransaction,
+                'error_code' => $e->getCode()
+            ];
+            
             $errorDetails = json_encode(['message' => $e->getMessage(), 'code' => $e->getCode(), 'query' => $this->query, 'bindings' => $this->bindings]);
             error_log("QueryExecuter::execute() - PDO Exception: " . $errorDetails);
             
-            $this->setError($e->getMessage());
+            $this->setError($e->getMessage(), $context);
             $this->endExecutionTime = microtime(true);
             // Release potentially broken connection
             $this->releaseConnection(true);
@@ -300,7 +341,11 @@ class QueryExecuter
         if ($this->db) { $this->setError('Cannot start transaction, a connection is already active'); return false; }
 
         try {
-            $this->db = $this->dbManager->getConnection();
+            $this->db = $this->getConnection();
+            if ($this->db === null) {
+                // Error already set by getConnection()
+                return false;
+            }
             $this->db->getPdo()->beginTransaction();
             $this->inTransaction = true;
             return true;

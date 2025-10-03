@@ -41,6 +41,14 @@ class InitProject extends Command
         'appIndex.php' => 'app/api/Index.php'
     ];
     
+    // PSR-4 autoload configuration for the framework
+    private const PSR4_AUTOLOAD = [
+        'App\\Api\\' => 'app/api/',
+        'App\\Controller\\' => 'app/controller/',
+        'App\\Model\\' => 'app/model/',
+        'App\\Table\\' => 'app/table/'
+    ];
+    
     
     public function execute()
     {
@@ -49,8 +57,10 @@ class InitProject extends Command
         try {
             $this->setupProjectStructure();
             $this->copyProjectFiles();
+            $this->setupPsr4Autoload();
             $this->createEnvFile();
             $this->createGlobalCommand();
+            $this->finalizeAutoload();
             $this->displayNextSteps();
             $this->offerOptionalTools();
             
@@ -189,6 +199,83 @@ class InitProject extends Command
         }
     }
     
+    /**
+     * Setup PSR-4 autoload configuration in composer.json
+     */
+    private function setupPsr4Autoload(): void
+    {
+        $composerJsonPath = $this->basePath . '/composer.json';
+        
+        // Read existing composer.json
+        $composerJson = [];
+        if (file_exists($composerJsonPath)) {
+            $content = file_get_contents($composerJsonPath);
+            if ($content !== false) {
+                $composerJson = json_decode($content, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    $this->warning("Failed to parse existing composer.json, will create new one");
+                    $composerJson = [];
+                }
+            }
+        }
+        
+        // Ensure autoload section exists
+        if (!isset($composerJson['autoload'])) {
+            $composerJson['autoload'] = [];
+        }
+        
+        // Ensure PSR-4 section exists
+        if (!isset($composerJson['autoload']['psr-4'])) {
+            $composerJson['autoload']['psr-4'] = [];
+        }
+        
+        // Add PSR-4 mappings if they don't exist
+        $addedMappings = false;
+        foreach (self::PSR4_AUTOLOAD as $namespace => $path) {
+            if (!isset($composerJson['autoload']['psr-4'][$namespace])) {
+                $composerJson['autoload']['psr-4'][$namespace] = $path;
+                $addedMappings = true;
+            }
+        }
+        
+        // Only write if we added mappings
+        if ($addedMappings) {
+            $updatedJson = json_encode($composerJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            if (!file_put_contents($composerJsonPath, $updatedJson)) {
+                throw new \RuntimeException("Failed to update composer.json with PSR-4 autoload");
+            }
+            $this->info("Added PSR-4 autoload configuration to composer.json");
+        } else {
+            $this->info("PSR-4 autoload configuration already exists in composer.json");
+        }
+    }
+    
+    /**
+     * Finalize autoload by running composer dump-autoload
+     */
+    private function finalizeAutoload(): void
+    {
+        $this->info("Finalizing autoload configuration...");
+        
+        $currentDir = getcwd();
+        chdir($this->basePath);
+        
+        $output = [];
+        $returnCode = 0;
+        exec('composer dump-autoload 2>&1', $output, $returnCode);
+        
+        chdir($currentDir);
+        
+        if ($returnCode !== 0) {
+            $this->warning("Failed to run composer dump-autoload. You may need to run it manually:");
+            $this->write("  composer dump-autoload\n", 'yellow');
+            foreach ($output as $line) {
+                $this->write("  {$line}\n", 'red');
+            }
+        } else {
+            $this->info("Autoload configuration finalized successfully!");
+        }
+    }
     
     /**
      * Get the destination path for a file, handling special mappings
@@ -510,7 +597,7 @@ EOT;
         // Ready to use
         $this->write("\033[1;33m│\033[0m \033[1;92m✅ Project Ready!\033[0m                                          \033[1;33m│\033[0m\n", 'white');
         $this->write("\033[1;33m│\033[0m  \033[1;36m$ \033[1;95mphp bin/gemvc\033[0m                                       \033[1;33m│\033[0m\n", 'white');
-        $this->write("\033[1;33m│\033[0m    \033[90m# Your project is ready to use immediately\033[0m                \033[1;33m│\033[0m\n", 'white');
+        $this->write("\033[1;33m│\033[0m    \033[90m# PSR-4 autoload configured and ready to use\033[0m              \033[1;33m│\033[0m\n", 'white');
         
         // Separator
         $this->write("\033[1;33m│\033[0m                                                             \033[1;33m│\033[0m\n", 'white');

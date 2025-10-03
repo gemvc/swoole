@@ -594,6 +594,8 @@ EOT;
      */
     private function displayNextSteps(): void
     {
+        $boxShow = new CliBoxShow();
+        
         $lines = [
             "\033[1;92m✅ Project Ready!\033[0m",
             " \033[1;36m$ \033[1;95mphp bin/gemvc\033[0m",
@@ -604,7 +606,7 @@ EOT;
             "   \033[90m# Only if you want to install additional dev dependencies\033[0m"
         ];
         
-        $this->displayBox("Next Steps", $lines);
+        $boxShow->displayBox("Next Steps", $lines);
     }
     
     /**
@@ -687,50 +689,10 @@ EOT;
      */
     private function displayToolInstallationPrompt(string $title, string $question, string $description, string $additionalInfo = ''): void
     {
-        $lines = [
-            $question,
-            $description
-        ];
-        
-        if ($additionalInfo) {
-            $lines[] = $additionalInfo;
-        }
-        
-        $this->displayBox($title, $lines);
+        $boxShow = new CliBoxShow();
+        $boxShow->displayToolInstallationPrompt($title, $question, $description, $additionalInfo);
     }
     
-    /**
-     * Display a dynamic box with automatic width calculation
-     */
-    private function displayBox(string $title, array $lines, string $color = 'yellow'): void
-    {
-        // Calculate the longest line length
-        $maxLength = 0;
-        foreach ($lines as $line) {
-            // Remove ANSI color codes for length calculation
-            $cleanLine = preg_replace('/\033\[[0-9;]*m/', '', $line);
-            $maxLength = max($maxLength, strlen($cleanLine));
-        }
-        
-        // Ensure minimum width and add padding
-        $boxWidth = max(50, $maxLength + 4);
-        
-        // Create the top border
-        $titleLine = "╭─ {$title} " . str_repeat('─', $boxWidth - strlen($title) - 4) . "╮";
-        $this->write("\n\033[1;33m{$titleLine}\033[0m\n", $color);
-        
-        // Create content lines
-        foreach ($lines as $line) {
-            $cleanLine = preg_replace('/\033\[[0-9;]*m/', '', $line);
-            $padding = $boxWidth - strlen($cleanLine) - 2;
-            $paddedLine = "│ {$line}" . str_repeat(' ', $padding) . "│";
-            $this->write("\033[1;33m{$paddedLine}\033[0m\n", 'white');
-        }
-        
-        // Create the bottom border
-        $bottomLine = "╰" . str_repeat('─', $boxWidth) . "╯";
-        $this->write("\033[1;33m{$bottomLine}\033[0m\n", $color);
-    }
     
     /**
      * Install PHPStan

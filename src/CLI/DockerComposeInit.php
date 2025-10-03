@@ -391,7 +391,7 @@ EOT;
             foreach ($command as $cmd) {
                 $content .= "      - {$cmd}\n";
             }
-            return $content;
+            // Continue with other MySQL service properties
         }
         
         if (isset($service['ports'])) {

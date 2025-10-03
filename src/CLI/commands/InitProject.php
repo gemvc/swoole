@@ -68,7 +68,7 @@ class InitProject extends Command
             $this->displayNextSteps();
             $this->offerOptionalTools();
             
-            $this->success("GEMVC OpenSwoole project initialized successfully!", true);
+            $this->displaySuccessGraphic();
         } catch (\Exception $e) {
             $this->error("Project initialization failed: " . $e->getMessage());
         }
@@ -526,6 +526,20 @@ EOT;
     {
         $toolsInstaller = new OptionalToolsInstaller($this->basePath, $this->packagePath, $this->nonInteractive);
         $toolsInstaller->offerOptionalTools();
+    }
+    
+    /**
+     * Display beautiful success graphic
+     */
+    private function displaySuccessGraphic(): void
+    {
+        $this->write("\n", 'white');
+        $this->write("    ╔══════════════════════════════════════════════════════════════╗\n", 'green');
+        $this->write("    ║                    🎯 SUCCESS! 🎯                           ║\n", 'green');
+        $this->write("    ║           GEMVC OpenSwoole Project Ready!                    ║\n", 'green');
+        $this->write("    ║             run:docker compose up --build                    ║\n", 'green');
+        $this->write("    ╚══════════════════════════════════════════════════════════════╝\n", 'green');
+        $this->write("\n", 'white');
     }
     
     

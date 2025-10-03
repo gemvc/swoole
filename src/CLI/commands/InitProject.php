@@ -204,29 +204,40 @@ class InitProject extends Command
      */
     private function setupPsr4Autoload(): void
     {
+        $this->info("=== DEBUG: setupPsr4Autoload() method called ===");
         $composerJsonPath = $this->basePath . '/composer.json';
+        $this->info("Setting up PSR-4 autoload configuration...");
+        $this->info("Base path: {$this->basePath}");
+        $this->info("Composer.json path: {$composerJsonPath}");
         
         // Read existing composer.json
         $composerJson = [];
         if (file_exists($composerJsonPath)) {
+            $this->info("Found existing composer.json at: {$composerJsonPath}");
             $content = file_get_contents($composerJsonPath);
             if ($content !== false) {
                 $composerJson = json_decode($content, true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
                     $this->warning("Failed to parse existing composer.json, will create new one");
                     $composerJson = [];
+                } else {
+                    $this->info("Successfully parsed existing composer.json");
                 }
             }
+        } else {
+            $this->info("No existing composer.json found, will create new one");
         }
         
         // Ensure autoload section exists
         if (!isset($composerJson['autoload'])) {
             $composerJson['autoload'] = [];
+            $this->info("Created autoload section");
         }
         
         // Ensure PSR-4 section exists
         if (!isset($composerJson['autoload']['psr-4'])) {
             $composerJson['autoload']['psr-4'] = [];
+            $this->info("Created PSR-4 section");
         }
         
         // Add PSR-4 mappings if they don't exist
@@ -235,19 +246,27 @@ class InitProject extends Command
             if (!isset($composerJson['autoload']['psr-4'][$namespace])) {
                 $composerJson['autoload']['psr-4'][$namespace] = $path;
                 $addedMappings = true;
+                $this->info("Added PSR-4 mapping: {$namespace} => {$path}");
+            } else {
+                $this->info("PSR-4 mapping already exists: {$namespace} => {$path}");
             }
         }
         
-        // Only write if we added mappings
-        if ($addedMappings) {
-            $updatedJson = json_encode($composerJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-            if (!file_put_contents($composerJsonPath, $updatedJson)) {
-                throw new \RuntimeException("Failed to update composer.json with PSR-4 autoload");
-            }
-            $this->info("Added PSR-4 autoload configuration to composer.json");
-        } else {
-            $this->info("PSR-4 autoload configuration already exists in composer.json");
+        // Always write the updated composer.json
+        $updatedJson = json_encode($composerJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if (!file_put_contents($composerJsonPath, $updatedJson)) {
+            throw new \RuntimeException("Failed to update composer.json with PSR-4 autoload");
         }
+        
+        if ($addedMappings) {
+            $this->info("Successfully added PSR-4 autoload configuration to composer.json");
+        } else {
+            $this->info("PSR-4 autoload configuration was already present in composer.json");
+        }
+        
+        // Show the final composer.json content for debugging
+        $this->info("Final composer.json content:");
+        $this->write($updatedJson . "\n", 'blue');
     }
     
     /**

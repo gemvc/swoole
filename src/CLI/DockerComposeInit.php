@@ -367,8 +367,7 @@ EOT;
                 '--skip-name-resolve',
                 '--skip-symbolic-links',
                 '--innodb-flush-log-at-trx-commit=2',
-                '--innodb-buffer-pool-size=128M',
-                '--skip-tz-utc'
+                '--innodb-buffer-pool-size=128M'
             ]);
         }
         // Production mode: Use base command only (verbose logs)

@@ -3,7 +3,6 @@
     "description": "core library of gemvc for swoole",
     "type": "library",
     "homepage": "https://gemvc.de",
-    "version": "0.1.3-pre",
     "require": {
         "firebase/php-jwt": "^6.8",
         "symfony/dotenv": "^7.2",

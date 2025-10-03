@@ -48,12 +48,17 @@ class DockerComposeInit extends Command
             'ports' => ['3306:3306'],
             'volumes' => ['mysql-data:/var/lib/mysql'],
             'environment' => [
-                'MYSQL_ROOT_PASSWORD' => 'rootpassword'
+                'MYSQL_ROOT_PASSWORD' => 'rootpassword',
+                'MYSQL_ALLOW_EMPTY_PASSWORD' => 'no'
             ],
             'command' => [
                 '--character-set-server=utf8mb4',
                 '--collation-server=utf8mb4_unicode_ci',
-                '--default-authentication-plugin=mysql_native_password'
+                '--authentication-policy=caching_sha2_password',
+                '--host-cache-size=0',
+                '--skip-ssl',
+                '--pid-file=/var/lib/mysql/mysql.pid',
+                '--skip-tz-utc'
             ]
         ]
     ];
@@ -192,7 +197,7 @@ class DockerComposeInit extends Command
      */
     private function generateDockerComposeContent(): string
     {
-        $content = "version: '3'\n\nservices:\n";
+        $content = "services:\n";
         
         // Add OpenSwoole service
         $content .= $this->generateOpenSwooleService();

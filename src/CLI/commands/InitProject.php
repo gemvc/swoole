@@ -204,40 +204,30 @@ class InitProject extends Command
      */
     private function setupPsr4Autoload(): void
     {
-        $this->info("=== DEBUG: setupPsr4Autoload() method called ===");
         $composerJsonPath = $this->basePath . '/composer.json';
         $this->info("Setting up PSR-4 autoload configuration...");
-        $this->info("Base path: {$this->basePath}");
-        $this->info("Composer.json path: {$composerJsonPath}");
         
         // Read existing composer.json
         $composerJson = [];
         if (file_exists($composerJsonPath)) {
-            $this->info("Found existing composer.json at: {$composerJsonPath}");
             $content = file_get_contents($composerJsonPath);
             if ($content !== false) {
                 $composerJson = json_decode($content, true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
                     $this->warning("Failed to parse existing composer.json, will create new one");
                     $composerJson = [];
-                } else {
-                    $this->info("Successfully parsed existing composer.json");
                 }
             }
-        } else {
-            $this->info("No existing composer.json found, will create new one");
         }
         
         // Ensure autoload section exists
         if (!isset($composerJson['autoload'])) {
             $composerJson['autoload'] = [];
-            $this->info("Created autoload section");
         }
         
         // Ensure PSR-4 section exists
         if (!isset($composerJson['autoload']['psr-4'])) {
             $composerJson['autoload']['psr-4'] = [];
-            $this->info("Created PSR-4 section");
         }
         
         // Add PSR-4 mappings if they don't exist
@@ -246,27 +236,20 @@ class InitProject extends Command
             if (!isset($composerJson['autoload']['psr-4'][$namespace])) {
                 $composerJson['autoload']['psr-4'][$namespace] = $path;
                 $addedMappings = true;
-                $this->info("Added PSR-4 mapping: {$namespace} => {$path}");
-            } else {
-                $this->info("PSR-4 mapping already exists: {$namespace} => {$path}");
             }
         }
         
-        // Always write the updated composer.json
+        // Write the updated composer.json
         $updatedJson = json_encode($composerJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         if (!file_put_contents($composerJsonPath, $updatedJson)) {
             throw new \RuntimeException("Failed to update composer.json with PSR-4 autoload");
         }
         
         if ($addedMappings) {
-            $this->info("Successfully added PSR-4 autoload configuration to composer.json");
+            $this->info("Added PSR-4 autoload configuration to composer.json");
         } else {
-            $this->info("PSR-4 autoload configuration was already present in composer.json");
+            $this->info("PSR-4 autoload configuration already exists in composer.json");
         }
-        
-        // Show the final composer.json content for debugging
-        $this->info("Final composer.json content:");
-        $this->write($updatedJson . "\n", 'blue');
     }
     
     /**
@@ -611,22 +594,17 @@ EOT;
      */
     private function displayNextSteps(): void
     {
-        $this->write("\033[1;33m╭─ Next Steps ───────────────────────────────────────────────╮\033[0m\n", 'yellow');
+        $lines = [
+            "\033[1;92m✅ Project Ready!\033[0m",
+            " \033[1;36m$ \033[1;95mphp bin/gemvc\033[0m",
+            "   \033[90m# PSR-4 autoload configured and ready to use\033[0m",
+            "",
+            "\033[1;94mOptional - Development Environment:\033[0m",
+            " \033[1;36m$ \033[1;95mcomposer update\033[0m",
+            "   \033[90m# Only if you want to install additional dev dependencies\033[0m"
+        ];
         
-        // Ready to use
-        $this->write("\033[1;33m│\033[0m \033[1;92m✅ Project Ready!\033[0m                                          \033[1;33m│\033[0m\n", 'white');
-        $this->write("\033[1;33m│\033[0m  \033[1;36m$ \033[1;95mphp bin/gemvc\033[0m                                       \033[1;33m│\033[0m\n", 'white');
-        $this->write("\033[1;33m│\033[0m    \033[90m# PSR-4 autoload configured and ready to use\033[0m              \033[1;33m│\033[0m\n", 'white');
-        
-        // Separator
-        $this->write("\033[1;33m│\033[0m                                                             \033[1;33m│\033[0m\n", 'white');
-        
-        // Optional: Development Environment
-        $this->write("\033[1;33m│\033[0m \033[1;94mOptional - Development Environment:\033[0m                      \033[1;33m│\033[0m\n", 'white');
-        $this->write("\033[1;33m│\033[0m  \033[1;36m$ \033[1;95mcomposer update\033[0m                                        \033[1;33m│\033[0m\n", 'white');
-        $this->write("\033[1;33m│\033[0m    \033[90m# Only if you want to install additional dev dependencies\033[0m  \033[1;33m│\033[0m\n", 'white');
-        
-        $this->write("\033[1;33m╰───────────────────────────────────────────────────────╯\033[0m\n\n", 'yellow');
+        $this->displayBox("Next Steps", $lines);
     }
     
     /**
@@ -709,13 +687,49 @@ EOT;
      */
     private function displayToolInstallationPrompt(string $title, string $question, string $description, string $additionalInfo = ''): void
     {
-        $this->write("\n\033[1;33m╭─ {$title} ───────────────────────────────────────╮\033[0m\n", 'yellow');
-        $this->write("\033[1;33m│\033[0m \033[1;94m{$question}\033[0m        \033[1;33m│\033[0m\n", 'white');
-        $this->write("\033[1;33m│\033[0m \033[1;36m{$description}\033[0m      \033[1;33m│\033[0m\n", 'white');
+        $lines = [
+            $question,
+            $description
+        ];
+        
         if ($additionalInfo) {
-            $this->write("\033[1;33m│\033[0m \033[1;36m{$additionalInfo}\033[0m    \033[1;33m│\033[0m\n", 'white');
+            $lines[] = $additionalInfo;
         }
-        $this->write("\033[1;33m╰───────────────────────────────────────────────────────────────╯\033[0m\n", 'yellow');
+        
+        $this->displayBox($title, $lines);
+    }
+    
+    /**
+     * Display a dynamic box with automatic width calculation
+     */
+    private function displayBox(string $title, array $lines, string $color = 'yellow'): void
+    {
+        // Calculate the longest line length
+        $maxLength = 0;
+        foreach ($lines as $line) {
+            // Remove ANSI color codes for length calculation
+            $cleanLine = preg_replace('/\033\[[0-9;]*m/', '', $line);
+            $maxLength = max($maxLength, strlen($cleanLine));
+        }
+        
+        // Ensure minimum width and add padding
+        $boxWidth = max(50, $maxLength + 4);
+        
+        // Create the top border
+        $titleLine = "╭─ {$title} " . str_repeat('─', $boxWidth - strlen($title) - 4) . "╮";
+        $this->write("\n\033[1;33m{$titleLine}\033[0m\n", $color);
+        
+        // Create content lines
+        foreach ($lines as $line) {
+            $cleanLine = preg_replace('/\033\[[0-9;]*m/', '', $line);
+            $padding = $boxWidth - strlen($cleanLine) - 2;
+            $paddedLine = "│ {$line}" . str_repeat(' ', $padding) . "│";
+            $this->write("\033[1;33m{$paddedLine}\033[0m\n", 'white');
+        }
+        
+        // Create the bottom border
+        $bottomLine = "╰" . str_repeat('─', $boxWidth) . "╯";
+        $this->write("\033[1;33m{$bottomLine}\033[0m\n", $color);
     }
     
     /**

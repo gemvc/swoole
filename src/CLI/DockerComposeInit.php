@@ -56,8 +56,8 @@ class DockerComposeInit extends Command
                 '--collation-server=utf8mb4_unicode_ci',
                 '--authentication-policy=caching_sha2_password',
                 '--host-cache-size=0',
-                '--tls-version=""',
-                '--pid-file=/var/lib/mysql/mysql.pid'
+                '--pid-file=/var/lib/mysql/mysql.pid',
+                '--disable-ssl'
             ]
         ]
     ];

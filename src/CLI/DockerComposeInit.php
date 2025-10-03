@@ -15,6 +15,7 @@ class DockerComposeInit extends Command
     private string $basePath;
     private bool $nonInteractive = false;
     private array $selectedServices = [];
+    private bool $developmentMode = true;
     
     // Available services configuration
     private const AVAILABLE_SERVICES = [
@@ -51,14 +52,7 @@ class DockerComposeInit extends Command
                 'MYSQL_ROOT_PASSWORD' => 'rootpassword',
                 'MYSQL_ALLOW_EMPTY_PASSWORD' => 'no'
             ],
-            'command' => [
-                '--character-set-server=utf8mb4',
-                '--collation-server=utf8mb4_unicode_ci',
-                '--authentication-policy=caching_sha2_password',
-                '--host-cache-size=0',
-                '--pid-file=/var/lib/mysql/mysql.pid',
-                '--disable-ssl'
-            ]
+            'command' => $this->getMySQLCommand()
         ]
     ];
     
@@ -135,6 +129,7 @@ class DockerComposeInit extends Command
         }
         
         $this->selectServices();
+        $this->askForDevelopmentMode();
     }
     
     /**
@@ -169,6 +164,34 @@ class DockerComposeInit extends Command
         $this->info("Selected services: " . implode(', ', array_map(function($key) {
             return self::AVAILABLE_SERVICES[$key]['name'];
         }, $this->selectedServices)));
+    }
+    
+    /**
+     * Ask user for development mode preference
+     */
+    private function askForDevelopmentMode(): void
+    {
+        if ($this->nonInteractive) {
+            $this->info("Using development mode (non-interactive mode)");
+            return;
+        }
+        
+        echo "\n\033[1;36mMySQL Configuration Mode:\033[0m\n";
+        echo "  \033[1;32m[1] Development Mode\033[0m - Clean logs, optimized for development\n";
+        echo "  \033[1;33m[2] Production Mode\033[0m - Verbose logs, full security warnings\n";
+        echo "\nEnter choice (1-2) [1]: ";
+        
+        $handle = fopen("php://stdin", "r");
+        $choice = trim(fgets($handle));
+        fclose($handle);
+        
+        if ($choice === '2') {
+            $this->developmentMode = false;
+            $this->info("Selected: Production Mode (verbose logs)");
+        } else {
+            $this->developmentMode = true;
+            $this->info("Selected: Development Mode (clean logs)");
+        }
     }
     
     /**
@@ -324,6 +347,36 @@ EOT;
     }
     
     /**
+     * Get MySQL command based on development mode
+     */
+    private function getMySQLCommand(): array
+    {
+        $baseCommand = [
+            '--character-set-server=utf8mb4',
+            '--collation-server=utf8mb4_unicode_ci',
+            '--authentication-policy=caching_sha2_password',
+            '--host-cache-size=0',
+            '--pid-file=/var/lib/mysql/mysql.pid',
+            '--disable-ssl'
+        ];
+        
+        if ($this->developmentMode) {
+            // Development mode: Clean logs, optimized for development
+            $baseCommand = array_merge($baseCommand, [
+                '--log-error-verbosity=1',
+                '--skip-log-bin',
+                '--skip-name-resolve',
+                '--skip-symbolic-links',
+                '--innodb-flush-log-at-trx-commit=2',
+                '--innodb-buffer-pool-size=128M'
+            ]);
+        }
+        // Production mode: Use base command only (verbose logs)
+        
+        return $baseCommand;
+    }
+    
+    /**
      * Generate service content based on service key
      */
     private function generateServiceContent(string $serviceKey): string
@@ -420,8 +473,14 @@ EOT;
     {
         $boxShow = new \Gemvc\CLI\Commands\CliBoxShow();
         
+        $modeText = $this->developmentMode ? 
+            "\033[1;32mDevelopment Mode\033[0m (clean logs)" : 
+            "\033[1;33mProduction Mode\033[0m (verbose logs)";
+            
         $lines = [
             "\033[1;92m✅ Docker Services Ready!\033[0m",
+            "",
+            "\033[1;94mMySQL Configuration:\033[0m {$modeText}",
             "",
             "\033[1;94mTo start your development environment:\033[0m",
             " \033[1;36m$ \033[1;95mdocker-compose up -d\033[0m",

@@ -8,6 +8,9 @@ use Hyperf\Di\Definition\DefinitionSource;
 use Hyperf\Config\Config;
 use Hyperf\DbConnection\Pool\PoolFactory;
 use Hyperf\DbConnection\Connection;
+use Hyperf\Contract\StdoutLoggerInterface;
+use Hyperf\Event\EventDispatcher;
+use Hyperf\Event\ListenerProvider;
 use Gemvc\Helper\ProjectHelper;
 
 /**
@@ -62,6 +65,28 @@ class DatabaseManager
         
         // Bind the container instance to the Psr\Container\ContainerInterface contract.
         $this->container->set(ContainerInterface::class, $this->container);
+        
+        // Bind the StdoutLoggerInterface required by Hyperf's database connection pool
+        // Use a simple logger implementation that doesn't require Symfony Console
+        $this->container->set(StdoutLoggerInterface::class, new class implements StdoutLoggerInterface {
+            public function emergency($message, array $context = []): void { error_log("[EMERGENCY] $message"); }
+            public function alert($message, array $context = []): void { error_log("[ALERT] $message"); }
+            public function critical($message, array $context = []): void { error_log("[CRITICAL] $message"); }
+            public function error($message, array $context = []): void { error_log("[ERROR] $message"); }
+            public function warning($message, array $context = []): void { error_log("[WARNING] $message"); }
+            public function notice($message, array $context = []): void { error_log("[NOTICE] $message"); }
+            public function info($message, array $context = []): void { error_log("[INFO] $message"); }
+            public function debug($message, array $context = []): void { error_log("[DEBUG] $message"); }
+            public function log($level, $message, array $context = []): void { error_log("[$level] $message"); }
+        });
+        
+        // Bind event dispatcher dependencies required by Hyperf's database connection pool
+        $listenerProvider = new ListenerProvider();
+        $this->container->set(\Psr\EventDispatcher\ListenerProviderInterface::class, $listenerProvider);
+        
+        // Create event dispatcher instance properly
+        $eventDispatcher = new EventDispatcher($listenerProvider, $this->container->get(StdoutLoggerInterface::class));
+        $this->container->set(\Psr\EventDispatcher\EventDispatcherInterface::class, $eventDispatcher);
 
         // Create the PoolFactory, which will use the container to get the configuration.
         $this->poolFactory = new PoolFactory($this->container);
@@ -160,8 +185,8 @@ class DatabaseManager
                 } catch (\Throwable $releaseError) {
                     error_log("Error releasing broken connection: " . $releaseError->getMessage());
                 }
-                // Recursively retry to get a healthy connection
-                return $this->getConnection($poolName);
+                // Return null instead of recursing to prevent infinite loop
+                return null;
             }
             
             return $conn;
@@ -191,12 +216,19 @@ class DatabaseManager
          * @return string The database host.
          */
         $getDbHost = function (): string {
-            // PHP_SAPI is 'cli' when running from the command line.
+            // Check if we're running in OpenSwoole server context
+            // OpenSwoole runs in CLI mode but we need to detect if it's the web server
+            if (PHP_SAPI === 'cli' && (defined('SWOOLE_BASE') || class_exists('\OpenSwoole\Server'))) {
+                // Running in OpenSwoole server - use container host
+                return $_ENV['DB_HOST'] ?? 'db';
+            }
+            
+            // True CLI context - use localhost
             if (PHP_SAPI === 'cli') {
                 return $_ENV['DB_HOST_CLI_DEV'] ?? 'localhost';
             }
             
-            // In any other context (like OpenSwoole server), use the container host.
+            // In any other context (like web server), use the container host.
             return $_ENV['DB_HOST'] ?? 'db';
         };
 

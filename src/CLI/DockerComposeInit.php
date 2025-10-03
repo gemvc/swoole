@@ -56,9 +56,8 @@ class DockerComposeInit extends Command
                 '--collation-server=utf8mb4_unicode_ci',
                 '--authentication-policy=caching_sha2_password',
                 '--host-cache-size=0',
-                '--skip-ssl',
-                '--pid-file=/var/lib/mysql/mysql.pid',
-                '--skip-tz-utc'
+                '--tls-version=""',
+                '--pid-file=/var/lib/mysql/mysql.pid'
             ]
         ]
     ];
@@ -186,10 +185,65 @@ class DockerComposeInit extends Command
         
         if (file_put_contents($composePath, $composeContent)) {
             $this->info("Created docker-compose.yml with selected services");
+            $this->cleanupDockerVolumes();
             $this->displayDockerInstructions();
         } else {
             $this->warning("Failed to create docker-compose.yml file");
         }
+    }
+    
+    /**
+     * Clean up Docker volumes and containers
+     */
+    private function cleanupDockerVolumes(): void
+    {
+        if (!$this->nonInteractive) {
+            echo "\n\033[1;36mClean up existing Docker containers and volumes? (y/N):\033[0m ";
+            $handle = fopen("php://stdin", "r");
+            $choice = trim(fgets($handle));
+            fclose($handle);
+            
+            if (strtolower($choice) !== 'y') {
+                return;
+            }
+        }
+        
+        $this->info("Cleaning up Docker resources...");
+        
+        $this->runDockerCommand(['compose', 'down']);
+        
+        // Clean up volumes for selected services
+        if (in_array('db', $this->selectedServices)) {
+            $this->runDockerCommand(['volume', 'rm', '-f', basename($this->basePath) . '_mysql-data']);
+        }
+        
+        if (in_array('redis', $this->selectedServices)) {
+            $this->runDockerCommand(['volume', 'rm', '-f', basename($this->basePath) . '_redis-data']);
+        }
+        
+        $this->info("Docker cleanup completed");
+    }
+    
+    /**
+     * Run Docker command
+     */
+    private function runDockerCommand(array $args): bool
+    {
+        $command = 'docker ' . implode(' ', array_map('escapeshellarg', $args));
+        
+        $output = [];
+        $returnCode = 0;
+        exec($command . ' 2>&1', $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            $this->warning("Failed to run: {$command}");
+            foreach ($output as $line) {
+                $this->write("  {$line}\n", 'red');
+            }
+            return false;
+        }
+        
+        return true;
     }
     
     /**

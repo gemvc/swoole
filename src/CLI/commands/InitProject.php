@@ -41,13 +41,6 @@ class InitProject extends Command
         'appIndex.php' => 'app/api/Index.php'
     ];
     
-    private const COMPOSER_SCRIPTS = [
-        'phpstan' => 'phpstan analyse',
-        'phpstan:check' => 'phpstan analyse --error-format=json',
-        'test' => 'phpunit',
-        'test:coverage' => 'phpunit --coverage-html coverage',
-        'test:parallel' => 'pest --parallel'
-    ];
     
     public function execute()
     {
@@ -195,6 +188,7 @@ class InitProject extends Command
             $this->copyFileWithConfirmation($sourcePath, $destPath, $file);
         }
     }
+    
     
     /**
      * Get the destination path for a file, handling special mappings
@@ -513,18 +507,18 @@ EOT;
     {
         $this->write("\033[1;33m╭─ Next Steps ───────────────────────────────────────────────╮\033[0m\n", 'yellow');
         
-        // Development Environment
-        $this->write("\033[1;33m│\033[0m \033[1;94mDevelopment Environment:\033[0m                                  \033[1;33m│\033[0m\n", 'white');
-        $this->write("\033[1;33m│\033[0m  \033[1;36m$ \033[1;95mcomposer update\033[0m                                        \033[1;33m│\033[0m\n", 'white');
-        $this->write("\033[1;33m│\033[0m    \033[90m# Includes development dependencies for testing/debugging\033[0m   \033[1;33m│\033[0m\n", 'white');
+        // Ready to use
+        $this->write("\033[1;33m│\033[0m \033[1;92m✅ Project Ready!\033[0m                                          \033[1;33m│\033[0m\n", 'white');
+        $this->write("\033[1;33m│\033[0m  \033[1;36m$ \033[1;95mphp bin/gemvc\033[0m                                       \033[1;33m│\033[0m\n", 'white');
+        $this->write("\033[1;33m│\033[0m    \033[90m# Your project is ready to use immediately\033[0m                \033[1;33m│\033[0m\n", 'white');
         
         // Separator
         $this->write("\033[1;33m│\033[0m                                                             \033[1;33m│\033[0m\n", 'white');
         
-        // Production Environment
-        $this->write("\033[1;33m│\033[0m \033[1;91mProduction Environment:\033[0m                                   \033[1;33m│\033[0m\n", 'white');
-        $this->write("\033[1;33m│\033[0m  \033[1;36m$ \033[1;95mcomposer update \033[1;93m--no-dev \033[1;92m--prefer-dist \033[1;96m--optimize-autoloader\033[0m \033[1;33m│\033[0m\n", 'white');
-        $this->write("\033[1;33m│\033[0m    \033[90m# Optimized installation without development packages\033[0m      \033[1;33m│\033[0m\n", 'white');
+        // Optional: Development Environment
+        $this->write("\033[1;33m│\033[0m \033[1;94mOptional - Development Environment:\033[0m                      \033[1;33m│\033[0m\n", 'white');
+        $this->write("\033[1;33m│\033[0m  \033[1;36m$ \033[1;95mcomposer update\033[0m                                        \033[1;33m│\033[0m\n", 'white');
+        $this->write("\033[1;33m│\033[0m    \033[90m# Only if you want to install additional dev dependencies\033[0m  \033[1;33m│\033[0m\n", 'white');
         
         $this->write("\033[1;33m╰───────────────────────────────────────────────────────╯\033[0m\n\n", 'yellow');
     }
@@ -627,7 +621,6 @@ EOT;
             $this->info("Installing PHPStan...");
             $this->runComposerCommand('require --dev phpstan/phpstan');
             $this->copyPhpstanConfig();
-            $this->addComposerScripts(['phpstan', 'phpstan:check']);
             $this->info("PHPStan installed successfully!");
         } catch (\Exception $e) {
             $this->warning("PHPStan installation failed: " . $e->getMessage());
@@ -643,7 +636,6 @@ EOT;
             $this->info("Installing PHPUnit...");
             $this->runComposerCommand('require --dev phpunit/phpunit');
             $this->createPhpunitConfig();
-            $this->addComposerScripts(['test', 'test:coverage']);
             $this->info("PHPUnit installed successfully!");
         } catch (\Exception $e) {
             $this->warning("PHPUnit installation failed: " . $e->getMessage());
@@ -659,7 +651,6 @@ EOT;
             $this->info("Installing Pest...");
             $this->runComposerCommand('require --dev pestphp/pest');
             $this->initializePest();
-            $this->addComposerScripts(['test', 'test:parallel']);
             $this->info("Pest installed successfully!");
         } catch (\Exception $e) {
             $this->warning("Pest installation failed: " . $e->getMessage());
@@ -790,42 +781,6 @@ EOT;
         $this->info("Pest initialized successfully!");
     }
     
-    /**
-     * Add composer scripts
-     */
-    private function addComposerScripts(array $scriptNames): void
-    {
-        try {
-            $composerJsonPath = $this->basePath . '/composer.json';
-            $composerJson = json_decode(file_get_contents($composerJsonPath), true);
-            
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                $this->warning("Failed to parse composer.json");
-                return;
-            }
-            
-            if (!isset($composerJson['scripts'])) {
-                $composerJson['scripts'] = [];
-            }
-            
-            foreach ($scriptNames as $scriptName) {
-                if (!isset($composerJson['scripts'][$scriptName]) && isset(self::COMPOSER_SCRIPTS[$scriptName])) {
-                    $composerJson['scripts'][$scriptName] = self::COMPOSER_SCRIPTS[$scriptName];
-                    $this->info("Added {$scriptName} script to composer.json");
-                }
-            }
-            
-            $updatedJson = json_encode($composerJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-            if (!file_put_contents($composerJsonPath, $updatedJson)) {
-                throw new \RuntimeException("Failed to update composer.json");
-            }
-            
-            $this->info("Composer.json updated with scripts");
-            
-        } catch (\Exception $e) {
-            $this->warning("Failed to update composer.json: " . $e->getMessage());
-        }
-    }
     
     /**
      * Determine project root directory

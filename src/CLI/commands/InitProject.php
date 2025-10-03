@@ -85,14 +85,14 @@ class InitProject extends Command
             $this->info("Running in non-interactive mode - will automatically accept defaults and overwrite files");
         }
         
-        $this->info("Initializing GEMVC OpenSwoole project...");
+        $this->info("🚀 Initializing GEMVC OpenSwoole project...");
         
         $this->basePath = defined('PROJECT_ROOT') ? PROJECT_ROOT : $this->determineProjectRoot();
         $this->packagePath = $this->determinePackagePath();
         $this->templateName = 'openswoole';
         
-        // Initialize FileSystemManager
-        $this->fileSystem = new FileSystemManager($this->nonInteractive);
+        // Initialize FileSystemManager with verbose mode disabled
+        $this->fileSystem = new FileSystemManager($this->nonInteractive, false);
     }
     
     /**
@@ -100,9 +100,11 @@ class InitProject extends Command
      */
     private function setupProjectStructure(): void
     {
+        $this->info("📁 Setting up project structure...");
         $this->createDirectories();
         $this->copyTemplatesFolder();
         $this->copyReadmeToRoot();
+        $this->info("✅ Project structure created");
     }
     
     /**
@@ -110,9 +112,11 @@ class InitProject extends Command
      */
     private function copyProjectFiles(): void
     {
+        $this->info("📄 Copying project files...");
         $startupPath = $this->findStartupPath();
         $this->copyTemplateFiles($startupPath);
         $this->copyUserFiles($startupPath);
+        $this->info("✅ Project files copied");
     }
     
     /**
@@ -188,7 +192,7 @@ class InitProject extends Command
     private function setupPsr4Autoload(): void
     {
         $composerJsonPath = $this->basePath . '/composer.json';
-        $this->info("Setting up PSR-4 autoload configuration...");
+        $this->info("⚙️ Configuring PSR-4 autoload...");
         
         // Read existing composer.json
         $composerJson = [];
@@ -228,11 +232,7 @@ class InitProject extends Command
             throw new \RuntimeException("Failed to update composer.json with PSR-4 autoload");
         }
         
-        if ($addedMappings) {
-            $this->info("Added PSR-4 autoload configuration to composer.json");
-        } else {
-            $this->info("PSR-4 autoload configuration already exists in composer.json");
-        }
+        $this->info("✅ PSR-4 autoload configured");
     }
     
     /**
@@ -240,7 +240,7 @@ class InitProject extends Command
      */
     private function finalizeAutoload(): void
     {
-        $this->info("Finalizing autoload configuration...");
+        $this->info("🔄 Finalizing autoload...");
         
         $currentDir = getcwd();
         chdir($this->basePath);
@@ -258,7 +258,7 @@ class InitProject extends Command
                 $this->write("  {$line}\n", 'red');
             }
         } else {
-            $this->info("Autoload configuration finalized successfully!");
+            $this->info("✅ Autoload finalized");
         }
     }
     
@@ -327,6 +327,7 @@ class InitProject extends Command
      */
     private function createEnvFile(): void
     {
+        $this->info("🔧 Creating environment file...");
         $envPath = $this->basePath . '/.env';
         $exampleEnvPath = $this->packagePath . '/src/startup/example.env';
         
@@ -336,6 +337,7 @@ class InitProject extends Command
         
         $envContent = $this->fileSystem->getFileContent($exampleEnvPath);
         $this->fileSystem->writeFile($envPath, $envContent, '.env file');
+        $this->info("✅ Environment file created");
     }
     
     /**
@@ -343,11 +345,12 @@ class InitProject extends Command
      */
     private function createGlobalCommand(): void
     {
-        $this->info("Setting up global command...");
+        $this->info("🔗 Setting up CLI commands...");
         
         $this->createLocalWrapper();
         $this->createWindowsBatch();
         $this->offerGlobalInstallation();
+        $this->info("✅ CLI commands ready");
     }
     
     /**
@@ -369,7 +372,6 @@ EOT;
         }
         
         chmod($wrapperPath, 0755);
-        $this->info("Created local command wrapper: {$wrapperPath}");
     }
     
     /**
@@ -383,9 +385,7 @@ EOT;
 php "%~dp0..\vendor\bin\gemvc" %*
 EOT;
         
-        if (file_put_contents($batPath, $batContent)) {
-            $this->info("Created Windows batch file: {$batPath}");
-        }
+        file_put_contents($batPath, $batContent);
     }
     
     /**

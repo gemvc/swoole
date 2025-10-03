@@ -51,8 +51,7 @@ class DockerComposeInit extends Command
             'environment' => [
                 'MYSQL_ROOT_PASSWORD' => 'rootpassword',
                 'MYSQL_ALLOW_EMPTY_PASSWORD' => 'no'
-            ],
-            'command' => $this->getMySQLCommand()
+            ]
         ]
     ];
     
@@ -384,6 +383,16 @@ EOT;
         $service = self::AVAILABLE_SERVICES[$serviceKey];
         $content = "\n  {$serviceKey}:\n";
         $content .= "    image: {$service['image']}\n";
+        
+        // Handle MySQL command dynamically
+        if ($serviceKey === 'db') {
+            $command = $this->getMySQLCommand();
+            $content .= "    command:\n";
+            foreach ($command as $cmd) {
+                $content .= "      - {$cmd}\n";
+            }
+            return $content;
+        }
         
         if (isset($service['ports'])) {
             $content .= "    ports:\n";

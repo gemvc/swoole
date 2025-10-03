@@ -14,10 +14,12 @@ use Gemvc\CLI\Command;
 class FileSystemManager extends Command
 {
     private bool $nonInteractive = false;
+    private bool $verbose = true;
     
-    public function __construct(bool $nonInteractive = false)
+    public function __construct(bool $nonInteractive = false, bool $verbose = true)
     {
         $this->nonInteractive = $nonInteractive;
+        $this->verbose = $verbose;
     }
     
     /**
@@ -34,7 +36,9 @@ class FileSystemManager extends Command
     public function createDirectoryIfNotExists(string $path): void
     {
         if (is_dir($path)) {
-            $this->info("Directory already exists: {$path}");
+            if ($this->verbose) {
+                $this->info("Directory already exists: {$path}");
+            }
             return;
         }
         
@@ -42,7 +46,9 @@ class FileSystemManager extends Command
             throw new \RuntimeException("Failed to create directory: {$path}");
         }
         
-        $this->info("Created directory: {$path}");
+        if ($this->verbose) {
+            $this->info("Created directory: {$path}");
+        }
     }
     
     /**
@@ -73,7 +79,9 @@ class FileSystemManager extends Command
             throw new \RuntimeException("Failed to copy file: {$sourcePath} to {$targetPath}");
         }
         
-        $this->info("Copied: {$fileName}");
+        if ($this->verbose) {
+            $this->info("Copied: {$fileName}");
+        }
     }
     
     /**

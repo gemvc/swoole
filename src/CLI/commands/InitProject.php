@@ -535,9 +535,9 @@ EOT;
     {
         $this->write("\n", 'white');
         $this->write("    ╔══════════════════════════════════════════════════════════════╗\n", 'green');
-        $this->write("    ║                    🎯 SUCCESS! 🎯                           ║\n", 'green');
+        $this->write("    ║                    🎯 SUCCESS! 🎯                            ║\n", 'green');
         $this->write("    ║           GEMVC OpenSwoole Project Ready!                    ║\n", 'green');
-        $this->write("    ║             run:docker compose up --build                    ║\n", 'green');
+        $this->write("    ║             run:docker compose up -d --build                 ║\n", 'green');
         $this->write("    ╚══════════════════════════════════════════════════════════════╝\n", 'green');
         $this->write("\n", 'white');
     }

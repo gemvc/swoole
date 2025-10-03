@@ -67,44 +67,6 @@ class CreateModel extends BaseCrudGenerator
         }
     }
 
-    protected function createDirectories(array $directories): void
-    {
-        foreach ($directories as $directory) {
-            if (!is_dir($directory)) {
-                if (!@mkdir($directory, 0755, true)) {
-                    throw new \RuntimeException("Failed to create directory: {$directory}");
-                }
-                $this->info("Created directory: {$directory}");
-            }
-        }
-    }
-
-    protected function confirmOverwrite(string $path): bool
-    {
-        if (!file_exists($path)) {
-            return true;
-        }
-        
-        echo "File already exists: {$path}" . PHP_EOL;
-        echo "Do you want to overwrite it? (y/N): ";
-        $handle = fopen("php://stdin", "r");
-        $line = fgets($handle);
-        fclose($handle);
-        return strtolower(trim($line)) === 'y';
-    }
-
-    protected function writeFile(string $path, string $content, string $fileType): void
-    {
-        if (!$this->confirmOverwrite($path)) {
-            $this->info("Skipped {$fileType}: " . basename($path));
-            return;
-        }
-
-        if (!file_put_contents($path, $content)) {
-            $this->error("Failed to create {$fileType} file: {$path}");
-        }
-        $this->info("Created {$fileType}: " . basename($path));
-    }
 
     protected function createModel(): void
     {

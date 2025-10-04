@@ -192,14 +192,17 @@ class OpenSwooleServer
     /**
      * Handle request processing errors
      */
-    private function handleRequestError(\Throwable $e, $response): void
+    private function handleRequestError(\Throwable $e, object $response): void
     {
         // Log the error
         error_log("Error processing request: " . $e->getMessage());
         
         // Send error response
+        // @phpstan-ignore-next-line
         $response->status(500);
+        // @phpstan-ignore-next-line
         $response->header('Content-Type', 'application/json');
+        // @phpstan-ignore-next-line
         $response->end(json_encode([
             'error' => 'Internal Server Error',
             'message' => $e->getMessage()

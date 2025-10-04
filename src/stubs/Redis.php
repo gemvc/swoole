@@ -1,61 +1,15 @@
 <?php
 
-/**
- * OpenSwoole Stub File for Development
- * 
- * This file provides type definitions for OpenSwoole and Redisclasses
- * to improve IDE support and static analysis during development.
- */
-
-namespace OpenSwoole\HTTP;
-
-class Server
-{
-    public function __construct(string $host, int $port) {}
-    /** @param array<string, mixed> $settings */
-    public function set(array $settings): void {}
-    public function on(string $event, callable $callback): void {}
-    public function start(): void {}
-    public function reload(): void {}
-    public function tick(int $interval, callable $callback): void {}
-}
-
-class Request
-{
-    /** @var array<string, mixed> */
-    public array $server;
-    /** @var array<string, mixed> */
-    public array $get;
-    /** @var array<string, mixed> */
-    public array $post;
-    /** @var array<string, mixed> */
-    public array $files;
-    /** @var array<string, mixed> */
-    public array $cookie;
-    /** @var array<string, mixed> */
-    public array $header;
-}
-
-class Response
-{
-    public function status(int $code): void {}
-    public function header(string $key, string $value): void {}
-    public function end(string $data): void {}
-}
-
-namespace Redis;
-
 class Redis
 {
-    public function __construct() {}
-    public function connect(string $host, int $port, float $timeout = 0): bool {}
-    public function pconnect(string $host, int $port, float $timeout = 0): bool {}
+    public function connect(string $host, int $port, float $timeout = 0.0): bool {}
+    public function pconnect(string $host, int $port, float $timeout = 0.0): bool {}
     public function auth(string $password): bool {}
     public function select(int $database): bool {}
     public function setOption(int $option, mixed $value): bool {}
     public function close(): bool {}
-    public function set(string $key, mixed $value): bool {}
     public function setex(string $key, int $ttl, mixed $value): bool {}
+    public function set(string $key, mixed $value): bool {}
     public function get(string $key): mixed {}
     public function del(string $key): int {}
     public function exists(string $key): bool {}
@@ -79,7 +33,7 @@ class Redis
     public function publish(string $channel, string $message): int {}
     /** @param array<string> $channels */
     public function subscribe(array $channels, callable $callback): void {}
-    public function multi(int $mode): self {}
+    public function multi(int $mode): bool|Redis {}
     
     public const PIPELINE = 1;
     public const MULTI = 2;

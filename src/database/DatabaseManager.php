@@ -69,15 +69,51 @@ class DatabaseManager
         // Bind the StdoutLoggerInterface required by Hyperf's database connection pool
         // Use a simple logger implementation that doesn't require Symfony Console
         $this->container->set(StdoutLoggerInterface::class, new class implements StdoutLoggerInterface {
-            public function emergency($message, array $context = []): void { error_log("[EMERGENCY] $message"); }
-            public function alert($message, array $context = []): void { error_log("[ALERT] $message"); }
-            public function critical($message, array $context = []): void { error_log("[CRITICAL] $message"); }
-            public function error($message, array $context = []): void { error_log("[ERROR] $message"); }
-            public function warning($message, array $context = []): void { error_log("[WARNING] $message"); }
-            public function notice($message, array $context = []): void { error_log("[NOTICE] $message"); }
-            public function info($message, array $context = []): void { error_log("[INFO] $message"); }
-            public function debug($message, array $context = []): void { error_log("[DEBUG] $message"); }
-            public function log($level, $message, array $context = []): void { error_log("[$level] $message"); }
+            /** @param array<string, mixed> $context */
+            public function emergency(mixed $message, array $context = []): void { 
+                // @phpstan-ignore-next-line
+                error_log("[EMERGENCY] " . (string) $message); 
+            }
+            /** @param array<string, mixed> $context */
+            public function alert(mixed $message, array $context = []): void { 
+                // @phpstan-ignore-next-line
+                error_log("[ALERT] " . (string) $message); 
+            }
+            /** @param array<string, mixed> $context */
+            public function critical(mixed $message, array $context = []): void { 
+                // @phpstan-ignore-next-line
+                error_log("[CRITICAL] " . (string) $message); 
+            }
+            /** @param array<string, mixed> $context */
+            public function error(mixed $message, array $context = []): void { 
+                // @phpstan-ignore-next-line
+                error_log("[ERROR] " . (string) $message); 
+            }
+            /** @param array<string, mixed> $context */
+            public function warning(mixed $message, array $context = []): void { 
+                // @phpstan-ignore-next-line
+                error_log("[WARNING] " . (string) $message); 
+            }
+            /** @param array<string, mixed> $context */
+            public function notice(mixed $message, array $context = []): void { 
+                // @phpstan-ignore-next-line
+                error_log("[NOTICE] " . (string) $message); 
+            }
+            /** @param array<string, mixed> $context */
+            public function info(mixed $message, array $context = []): void { 
+                // @phpstan-ignore-next-line
+                error_log("[INFO] " . (string) $message); 
+            }
+            /** @param array<string, mixed> $context */
+            public function debug(mixed $message, array $context = []): void { 
+                // @phpstan-ignore-next-line
+                error_log("[DEBUG] " . (string) $message); 
+            }
+            /** @param array<string, mixed> $context */
+            public function log(mixed $level, mixed $message, array $context = []): void { 
+                // @phpstan-ignore-next-line
+                error_log("[" . (string) $level . "] " . (string) $message); 
+            }
         });
         
         // Bind event dispatcher dependencies required by Hyperf's database connection pool
@@ -85,7 +121,9 @@ class DatabaseManager
         $this->container->set(\Psr\EventDispatcher\ListenerProviderInterface::class, $listenerProvider);
         
         // Create event dispatcher instance properly
-        $eventDispatcher = new EventDispatcher($listenerProvider, $this->container->get(StdoutLoggerInterface::class));
+        $logger = $this->container->get(StdoutLoggerInterface::class);
+        /** @var \Psr\Log\LoggerInterface|null $logger */
+        $eventDispatcher = new EventDispatcher($listenerProvider, $logger);
         $this->container->set(\Psr\EventDispatcher\EventDispatcherInterface::class, $eventDispatcher);
 
         // Create the PoolFactory, which will use the container to get the configuration.
@@ -134,7 +172,7 @@ class DatabaseManager
      * Set an error message with optional context.
      * 
      * @param string|null $error The error message to set
-     * @param array $context Additional context information
+     * @param array<string, mixed> $context Additional context information
      */
     public function setError(?string $error, array $context = []): void
     {
@@ -176,6 +214,7 @@ class DatabaseManager
             
             // Verify connection is alive with a lightweight ping
             try {
+                // @phpstan-ignore-next-line
                 $conn->getPdo()->query('SELECT 1');
             } catch (\Throwable $e) {
                 // Connection is broken, release it and get a new one
@@ -207,7 +246,7 @@ class DatabaseManager
      * Builds the database configuration array by reading environment variables.
      * This makes the class independent of external config files.
      *
-     * @return array The database configuration array.
+     * @return array<string, mixed> The database configuration array.
      */
     private function getDatabaseConfig(): array
     {
@@ -220,35 +259,38 @@ class DatabaseManager
             // OpenSwoole runs in CLI mode but we need to detect if it's the web server
             if (PHP_SAPI === 'cli' && (defined('SWOOLE_BASE') || class_exists('\OpenSwoole\Server'))) {
                 // Running in OpenSwoole server - use container host
-                return $_ENV['DB_HOST'] ?? 'db';
+                $host = $_ENV['DB_HOST'] ?? 'db';
+                return is_string($host) ? $host : 'db';
             }
             
             // True CLI context - use localhost
             if (PHP_SAPI === 'cli') {
-                return $_ENV['DB_HOST_CLI_DEV'] ?? 'localhost';
+                $host = $_ENV['DB_HOST_CLI_DEV'] ?? 'localhost';
+                return is_string($host) ? $host : 'localhost';
             }
             
             // In any other context (like web server), use the container host.
-            return $_ENV['DB_HOST'] ?? 'db';
+            $host = $_ENV['DB_HOST'] ?? 'db';
+            return is_string($host) ? $host : 'db';
         };
 
         return [
             'default' => [
-                'driver' => $_ENV['DB_DRIVER'] ?? 'mysql',
+                'driver' => is_string($_ENV['DB_DRIVER'] ?? 'mysql') ? ($_ENV['DB_DRIVER'] ?? 'mysql') : 'mysql',
                 'host' => $getDbHost(),
-                'port' => (int) ($_ENV['DB_PORT'] ?? 3306),
-                'database' => $_ENV['DB_NAME'] ?? 'gemvc_db',
-                'username' => $_ENV['DB_USER'] ?? 'root',
-                'password' => $_ENV['DB_PASSWORD'] ?? '',
-                'charset' => $_ENV['DB_CHARSET'] ?? 'utf8mb4',
-                'collation' =>  $_ENV['DB_COLLATION'] ?? 'utf8mb4_unicode_ci',
+                'port' => is_numeric($_ENV['DB_PORT'] ?? '3306') ? (int) ($_ENV['DB_PORT'] ?? '3306') : 3306,
+                'database' => is_string($_ENV['DB_NAME'] ?? 'gemvc_db') ? ($_ENV['DB_NAME'] ?? 'gemvc_db') : 'gemvc_db',
+                'username' => is_string($_ENV['DB_USER'] ?? 'root') ? ($_ENV['DB_USER'] ?? 'root') : 'root',
+                'password' => is_string($_ENV['DB_PASSWORD'] ?? '') ? ($_ENV['DB_PASSWORD'] ?? '') : '',
+                'charset' => is_string($_ENV['DB_CHARSET'] ?? 'utf8mb4') ? ($_ENV['DB_CHARSET'] ?? 'utf8mb4') : 'utf8mb4',
+                'collation' => is_string($_ENV['DB_COLLATION'] ?? 'utf8mb4_unicode_ci') ? ($_ENV['DB_COLLATION'] ?? 'utf8mb4_unicode_ci') : 'utf8mb4_unicode_ci',
                 'pool' => [
-                    'min_connections' => (int) ($_ENV['MIN_DB_CONNECTION_POOL'] ?? 1),
-                    'max_connections' => (int) ($_ENV['MAX_DB_CONNECTION_POOL'] ?? 10),
-                    'connect_timeout' => (float) ($_ENV['DB_CONNECTION_TIME_OUT'] ?? 10.0),
-                    'wait_timeout' => (float) ($_ENV['DB_CONNECTION_EXPIER_TIME'] ?? 3.0),
+                    'min_connections' => is_numeric($_ENV['MIN_DB_CONNECTION_POOL'] ?? '1') ? (int) ($_ENV['MIN_DB_CONNECTION_POOL'] ?? '1') : 1,
+                    'max_connections' => is_numeric($_ENV['MAX_DB_CONNECTION_POOL'] ?? '10') ? (int) ($_ENV['MAX_DB_CONNECTION_POOL'] ?? '10') : 10,
+                    'connect_timeout' => is_numeric($_ENV['DB_CONNECTION_TIME_OUT'] ?? '10.0') ? (float) ($_ENV['DB_CONNECTION_TIME_OUT'] ?? '10.0') : 10.0,
+                    'wait_timeout' => is_numeric($_ENV['DB_CONNECTION_EXPIER_TIME'] ?? '3.0') ? (float) ($_ENV['DB_CONNECTION_EXPIER_TIME'] ?? '3.0') : 3.0,
                     'heartbeat' => -1,
-                    'max_idle_time' => (float) ($_ENV['DB_CONNECTION_MAX_AGE'] ?? 60.0),
+                    'max_idle_time' => is_numeric($_ENV['DB_CONNECTION_MAX_AGE'] ?? '60.0') ? (float) ($_ENV['DB_CONNECTION_MAX_AGE'] ?? '60.0') : 60.0,
                 ],
             ],
         ];

@@ -19,6 +19,7 @@ class CreateCrud extends BaseCrudGenerator
             $service->args = [$this->args[0], '-cmt']; // Use original input + all flags
             $service->execute();
 
+            // @phpstan-ignore-next-line
             $serviceName = $this->formatServiceName($this->args[0]);
             $this->success("CRUD for {$serviceName} created successfully!");
             

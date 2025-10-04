@@ -15,6 +15,8 @@ class CliBoxShow extends Command
 {
     /**
      * Display a dynamic box with automatic width calculation
+     * 
+     * @param array<string> $lines
      */
     public function displayBox(string $title, array $lines, string $color = 'yellow'): void
     {
@@ -22,7 +24,7 @@ class CliBoxShow extends Command
         $maxLength = 0;
         foreach ($lines as $line) {
             // Remove ANSI color codes for length calculation
-            $cleanLine = preg_replace('/\033\[[0-9;]*m/', '', $line);
+            $cleanLine = preg_replace('/\033\[[0-9;]*m/', '', $line) ?? $line;
             $maxLength = max($maxLength, strlen($cleanLine));
         }
         
@@ -38,7 +40,7 @@ class CliBoxShow extends Command
         
         // Create content lines
         foreach ($lines as $line) {
-            $cleanLine = preg_replace('/\033\[[0-9;]*m/', '', $line);
+            $cleanLine = preg_replace('/\033\[[0-9;]*m/', '', $line) ?? $line;
             $padding = $boxWidth - strlen($cleanLine) - 2;
             $paddedLine = "│ {$line}" . str_repeat(' ', $padding) . "│";
             $this->write("\033[1;33m{$paddedLine}\033[0m\n", 'white');
@@ -52,6 +54,9 @@ class CliBoxShow extends Command
     /**
      * Display a success box with green styling
      */
+    /**
+     * @param array<string> $lines
+     */
     public function displaySuccessBox(string $title, array $lines): void
     {
         $this->displayBox($title, $lines, 'green');
@@ -59,6 +64,9 @@ class CliBoxShow extends Command
     
     /**
      * Display an info box with blue styling
+     */
+    /**
+     * @param array<string> $lines
      */
     public function displayInfoBox(string $title, array $lines): void
     {
@@ -68,6 +76,9 @@ class CliBoxShow extends Command
     /**
      * Display a warning box with yellow styling
      */
+    /**
+     * @param array<string> $lines
+     */
     public function displayWarningBox(string $title, array $lines): void
     {
         $this->displayBox($title, $lines, 'yellow');
@@ -76,6 +87,9 @@ class CliBoxShow extends Command
     /**
      * Display an error box with red styling
      */
+    /**
+     * @param array<string> $lines
+     */
     public function displayErrorBox(string $title, array $lines): void
     {
         $this->displayBox($title, $lines, 'red');
@@ -83,6 +97,9 @@ class CliBoxShow extends Command
     
     /**
      * Display a simple message box without title
+     */
+    /**
+     * @param array<string> $lines
      */
     public function displayMessageBox(array $lines, string $color = 'yellow'): void
     {
@@ -109,9 +126,10 @@ class CliBoxShow extends Command
     /**
      * Required execute method (not used in utility class)
      */
-    public function execute()
+    public function execute(): mixed
     {
         // This is a utility class, not a command
         $this->error("CliBoxShow is a utility class and should not be executed directly.");
+        return null;
     }
 }

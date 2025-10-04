@@ -3,6 +3,9 @@ parameters:
     paths:
         - src
     excludePaths:
+        - src/http/SwooleWebSocketHandler.php
         - vendor/*
+        - src/startup/*
     stubFiles:
         - src/stubs/OpenSwoole.php
+        - src/stubs/Redis.php

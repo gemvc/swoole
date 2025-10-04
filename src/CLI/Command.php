@@ -4,16 +4,22 @@ namespace Gemvc\CLI;
 
 abstract class Command
 {
+    /** @var array<int, mixed> */
     protected array $args;
-    protected $options;
+    /** @var array<string, mixed> */
+    protected array $options;
 
+    /**
+     * @param array<int, mixed> $args
+     * @param array<string, mixed> $options
+     */
     public function __construct(array $args = [], array $options = [])
     {
         $this->args = $args;
         $this->options = $options;
     }
 
-    abstract public function execute();
+    abstract public function execute(): mixed;
 
     private function supportsAnsiColors(): bool
     {

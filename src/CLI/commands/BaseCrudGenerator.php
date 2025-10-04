@@ -4,9 +4,10 @@ namespace Gemvc\CLI\Commands;
 
 abstract class BaseCrudGenerator extends BaseGenerator
 {
-    protected $serviceName;
-    protected $basePath;
-    protected $flags = [];
+    protected string $serviceName;
+    protected string $basePath;
+    /** @var array<string, bool> */
+    protected array $flags = [];
 
     /**
      * Parse command line flags
@@ -22,7 +23,7 @@ abstract class BaseCrudGenerator extends BaseGenerator
         ];
 
         // Check for combined flags (e.g., -cmt)
-        if (isset($this->args[1]) && strpos($this->args[1], '-') === 0) {
+        if (isset($this->args[1]) && is_string($this->args[1]) && strpos($this->args[1], '-') === 0) {
             $flagStr = substr($this->args[1], 1);
             $this->flags['controller'] = strpos($flagStr, 'c') !== false;
             $this->flags['model'] = strpos($flagStr, 'm') !== false;
@@ -38,7 +39,7 @@ abstract class BaseCrudGenerator extends BaseGenerator
     /**
      * Get required directories based on flags
      * 
-     * @return array
+     * @return array<string>
      */
     protected function getRequiredDirectories(): array
     {

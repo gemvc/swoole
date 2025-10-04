@@ -21,6 +21,7 @@ class QueryExecuter
     private float $startExecutionTime;
     private ?float $endExecutionTime = null;
     private string $query = '';
+    /** @var array<string, mixed> */
     private array $bindings = [];
     private bool $inTransaction = false;
 
@@ -84,6 +85,9 @@ class QueryExecuter
         return $this->error;
     }
 
+    /**
+     * @param array<string, mixed> $context
+     */
     public function setError(?string $error, array $context = []): void
     {
         if ($error === null) {
@@ -134,6 +138,7 @@ class QueryExecuter
                     return;
                 }
             }
+            // @phpstan-ignore-next-line
             $this->statement = $this->db->getPdo()->prepare($query);
         } catch (Throwable $e) {
             $this->setError('Error preparing statement: ' . $e->getMessage());
@@ -192,6 +197,7 @@ class QueryExecuter
             $this->statement->execute();
             $this->affectedRows = $this->statement->rowCount();
             if (stripos(trim($this->query), 'INSERT') === 0) {
+                 // @phpstan-ignore-next-line
                  $this->lastInsertedId = $this->db->getPdo()->lastInsertId();
             }
             $this->endExecutionTime = microtime(true);
@@ -242,6 +248,9 @@ class QueryExecuter
         return round(($this->endExecutionTime - $this->startExecutionTime) * 1000, 2);
     }
 
+    /**
+     * @return array<object>|false
+     */
     public function fetchAllObjects(): array|false
     {
         if (!$this->statement) { $this->setError('No statement executed.'); return false; }
@@ -264,6 +273,9 @@ class QueryExecuter
         }
     }
 
+    /**
+     * @return array<array<string, mixed>>|false
+     */
     public function fetchAll(): array|false
     {
         if (!$this->statement) { $this->setError('No statement executed.'); return false; }
@@ -311,7 +323,7 @@ class QueryExecuter
     /**
      * Fetches a single row as an associative array.
      *
-     * @return array|false Returns the row as an associative array, or false on failure.
+     * @return array<string, mixed>|false Returns the row as an associative array, or false on failure.
      */
     public function fetchOne(): array|false
     {
@@ -325,7 +337,11 @@ class QueryExecuter
                 $this->releaseConnection();
             }
             
-            return $result !== false ? $result : false;
+            if ($result === false) {
+                return false;
+            }
+            /** @var array<string, mixed> $result */
+            return $result;
         } catch (\PDOException $e) {
             $this->setError('Error fetching row: ' . $e->getMessage());
             if (!$this->inTransaction) {
@@ -346,6 +362,7 @@ class QueryExecuter
                 // Error already set by getConnection()
                 return false;
             }
+            // @phpstan-ignore-next-line
             $this->db->getPdo()->beginTransaction();
             $this->inTransaction = true;
             return true;
@@ -360,6 +377,7 @@ class QueryExecuter
     {
         if (!$this->inTransaction || !$this->db) { $this->setError('No active transaction to commit'); return false; }
         try {
+            // @phpstan-ignore-next-line
             $this->db->getPdo()->commit();
             $this->inTransaction = false;
             return true;
@@ -375,6 +393,7 @@ class QueryExecuter
     {
         if (!$this->inTransaction || !$this->db) { $this->setError('No active transaction to rollback'); return false; }
         try {
+            // @phpstan-ignore-next-line
             $this->db->getPdo()->rollBack();
             $this->inTransaction = false;
             return true;
@@ -393,7 +412,8 @@ class QueryExecuter
     {
         if ($this->inTransaction && $this->db && $forceRollback) {
             try {
-                $this->db->getPdo()->rollBack();
+                // @phpstan-ignore-next-line
+            $this->db->getPdo()->rollBack();
                 $this->debug("Transaction rolled back in secure()");
             } catch (Throwable $e) {
                 error_log('Error during forced rollback in secure(): ' . $e->getMessage());

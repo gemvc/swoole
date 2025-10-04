@@ -7,9 +7,10 @@ use Gemvc\CLI\FileSystemManager;
 
 abstract class BaseGenerator extends Command
 {
-    protected $serviceName;
-    protected $basePath;
-    protected $flags = [];
+    protected string $serviceName;
+    protected string $basePath;
+    /** @var array<string, bool> */
+    protected array $flags = [];
     protected FileSystemManager $fileSystem;
 
     public function __construct(array $args = [], array $options = [])
@@ -32,7 +33,7 @@ abstract class BaseGenerator extends Command
     /**
      * Create necessary directories
      * 
-     * @param array $directories
+     * @param array<string> $directories
      * @return void
      * @throws \RuntimeException
      */
@@ -97,14 +98,22 @@ abstract class BaseGenerator extends Command
         $templatePath = $projectRoot .DIRECTORY_SEPARATOR. "templates".DIRECTORY_SEPARATOR."cli".DIRECTORY_SEPARATOR. "{$templateName}.template";
         
         if (file_exists($templatePath)) {
-            return file_get_contents($templatePath);
+            $content = file_get_contents($templatePath);
+            if ($content === false) {
+                throw new \RuntimeException("Failed to read template: {$templatePath}");
+            }
+            return $content;
         }
         
         // Fallback to vendor templates if project templates don't exist
         $vendorTemplatePath = dirname(__DIR__) . DIRECTORY_SEPARATOR . "templates" . DIRECTORY_SEPARATOR . "cli" . DIRECTORY_SEPARATOR . "{$templateName}.template";
         if (file_exists($vendorTemplatePath)) {
             $this->warning("Using vendor template for {$templateName} - consider copying templates to project root");
-            return file_get_contents($vendorTemplatePath);
+            $content = file_get_contents($vendorTemplatePath);
+            if ($content === false) {
+                throw new \RuntimeException("Failed to read vendor template: {$vendorTemplatePath}");
+            }
+            return $content;
         }
         
         throw new \RuntimeException("Template not found: {$templateName} (checked: {$templatePath}, {$vendorTemplatePath})");
@@ -114,7 +123,7 @@ abstract class BaseGenerator extends Command
      * Replace template variables
      * 
      * @param string $content
-     * @param array $variables
+     * @param array<string, string> $variables
      * @return string
      */
     protected function replaceTemplateVariables(string $content, array $variables): string

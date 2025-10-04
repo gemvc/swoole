@@ -6,9 +6,10 @@ use Gemvc\CLI\Commands\BaseCrudGenerator;
 
 class CreateModel extends BaseCrudGenerator
 {
-    protected $serviceName;
-    protected $basePath;
-    protected $flags = [];
+    protected string $serviceName;
+    protected string $basePath;
+    /** @var array<string, bool> */
+    protected array $flags = [];
 
     /**
      * Format service name to proper case
@@ -33,7 +34,7 @@ class CreateModel extends BaseCrudGenerator
         ];
 
         // Check for table flag
-        if (isset($this->args[1]) && strpos($this->args[1], '-') === 0) {
+        if (isset($this->args[1]) && is_string($this->args[1]) && strpos($this->args[1], '-') === 0) {
             $flagStr = substr($this->args[1], 1);
             $this->flags['table'] = strpos($flagStr, 't') !== false;
         }
@@ -41,10 +42,11 @@ class CreateModel extends BaseCrudGenerator
 
     public function execute(): void
     {
-        if (empty($this->args[0])) {
+        if (empty($this->args[0]) || !is_string($this->args[0])) {
             $this->error("Model name is required. Usage: gemvc create:model ModelName [-t]");
         }
 
+        // @phpstan-ignore-next-line
         $this->serviceName = $this->formatServiceName($this->args[0]);
         $this->basePath = defined('PROJECT_ROOT') ? PROJECT_ROOT : $this->determineProjectRoot();
         $this->parseFlags();

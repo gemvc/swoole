@@ -6,9 +6,10 @@ use Gemvc\CLI\Commands\BaseCrudGenerator;
 
 class CreateService extends BaseCrudGenerator
 {
-    protected $serviceName;
-    protected $basePath;
-    protected $flags = [];
+    protected string $serviceName;
+    protected string $basePath;
+    /** @var array<string, bool> */
+    protected array $flags = [];
 
     /**
      * Format service name to proper case
@@ -35,7 +36,7 @@ class CreateService extends BaseCrudGenerator
         ];
 
         // Check for combined flags (e.g., -cmt)
-        if (isset($this->args[1]) && strpos($this->args[1], '-') === 0) {
+        if (isset($this->args[1]) && is_string($this->args[1]) && strpos($this->args[1], '-') === 0) {
             $flagStr = substr($this->args[1], 1);
             $this->flags['controller'] = strpos($flagStr, 'c') !== false;
             $this->flags['model'] = strpos($flagStr, 'm') !== false;
@@ -45,10 +46,11 @@ class CreateService extends BaseCrudGenerator
 
     public function execute(): void
     {
-        if (empty($this->args[0])) {
+        if (empty($this->args[0]) || !is_string($this->args[0])) {
             $this->error("Service name is required. Usage: gemvc create:service ServiceName [-c|-m|-t]");
         }
 
+        // @phpstan-ignore-next-line
         $this->serviceName = $this->formatServiceName($this->args[0]);
         $this->basePath = defined('PROJECT_ROOT') ? PROJECT_ROOT : $this->determineProjectRoot();
         $this->parseFlags();

@@ -3,11 +3,24 @@
 namespace Gemvc\Core;
 
 use Gemvc\Core\ApiDocGenerator;
+use Gemvc\Core\Documentation\ParameterTableGenerator;
+use Gemvc\Core\Documentation\HtmlHelper;
+use Gemvc\Core\Documentation\ParameterValidator;
 use Gemvc\Http\JsonResponse;
 use Gemvc\Http\Response;
 
 class Documentation
 {
+    private ParameterTableGenerator $parameterTableGenerator;
+    private HtmlHelper $htmlHelper;
+    private ParameterValidator $parameterValidator;
+
+    public function __construct()
+    {
+        $this->parameterTableGenerator = new ParameterTableGenerator();
+        $this->htmlHelper = new HtmlHelper();
+        $this->parameterValidator = new ParameterValidator();
+    }
     /**
      * @param array<string, array{description: string, endpoints: array<string, array{method: string, url: string, description: string, parameters?: array<string, array{type: string, required: bool}>, urlparams?: array<string, array{type: string, required: bool}>, query_parameters?: array<string, array<string, array{type: string, required: bool}>>, response?: string|false}>}> $documentation
      */
@@ -16,6 +29,7 @@ class Documentation
         return $this->generateHtmlStructure($documentation);
     }
 
+    /** @param array<string, mixed> $documentation */
     private function generateHtmlStructure(array $documentation): string
     {
         $html = <<<HTML
@@ -66,32 +80,30 @@ class Documentation
         return $html;
     }
 
+    /** @param array<string, mixed> $documentation */
     private function generateTreeNavigation(array $documentation): string
     {
+        if (!$this->parameterValidator->isValidDocumentation($documentation)) {
+            return '<p>Invalid documentation structure</p>';
+        }
+
         $html = '';
         foreach ($documentation as $serviceName => $service) {
-            $html .= <<<HTML
-            <div class="tree-item">
-                <div class="service-name" onclick="toggleService(this)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 18l6-6-6-6"/>
-                    </svg>
-                    {$serviceName}
-                </div>
-                <div class="service-methods" style="display: none;">
-            HTML;
-
-            foreach ($service['endpoints'] as $methodName => $method) {
-                $methodClass = strtolower($method['method']);
-                $html .= <<<HTML
-                    <div class="method-item" onclick="showEndpoint('{$serviceName}', '{$methodName}')">
-                        <span class="method-icon method-{$methodClass}">{$method['method']}</span>
-                        {$methodName}
-                    </div>
-                HTML;
+            if (!is_array($service) || !isset($service['endpoints']) || !is_array($service['endpoints'])) {
+                continue;
             }
 
-            $html .= '</div></div>';
+            $methodsHtml = '';
+            foreach ($service['endpoints'] as $methodName => $method) {
+                if (!is_string($methodName) || !is_array($method) || !isset($method['method'])) {
+                    continue;
+                }
+
+                $methodType = $this->parameterValidator->getMethodName($method);
+                $methodsHtml .= $this->htmlHelper->generateMethodNavigation($serviceName, $methodName, $methodType);
+            }
+
+            $html .= $this->htmlHelper->generateServiceNavigation($serviceName, $methodsHtml);
         }
         return $html;
     }
@@ -461,8 +473,11 @@ class Documentation
         CSS;
     }
 
+    /** @param array<string, mixed> $documentation */
     private function getJavaScript(array $documentation): string
     {
+        $parameterTableJs = $this->parameterTableGenerator->generateJavaScriptFunction();
+        
         return <<<JS
             const documentation = {$this->formatJson(json_encode($documentation, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP))};
             
@@ -477,14 +492,19 @@ class Documentation
 
             function showEndpoint(serviceName, methodName) {
                 const service = documentation[serviceName];
+                if (!service || !service.endpoints || !service.endpoints[methodName]) {
+                    document.getElementById('endpoint-content').innerHTML = '<p>Endpoint not found</p>';
+                    return;
+                }
+                
                 const endpoint = service.endpoints[methodName];
-                const methodClass = endpoint.method.toLowerCase();
+                const methodClass = endpoint.method ? endpoint.method.toLowerCase() : 'unknown';
                 
                 const content = `
                     <div class="endpoint-details">
                         <div class="endpoint-header">
-                            <span class="method method-\${methodClass}">\${endpoint.method}</span>
-                            <span class="url">\${endpoint.url}</span>
+                            <span class="method method-\${methodClass}">\${endpoint.method || 'UNKNOWN'}</span>
+                            <span class="url">\${endpoint.url || '/'}</span>
                         </div>
                         <div class="endpoint-description">
                             \${endpoint.description || 'No description available'}
@@ -511,72 +531,7 @@ class Documentation
                 document.getElementById('endpoint-content').innerHTML = content;
             }
 
-            function generateParameterTable(endpoint) {
-                const hasParams = endpoint.parameters && Object.keys(endpoint.parameters).length > 0;
-                const hasGetParams = endpoint.get_parameters && Object.keys(endpoint.get_parameters).length > 0;
-                const hasUrlParams = endpoint.urlparams && Object.keys(endpoint.urlparams).length > 0;
-                const hasQueryParams = endpoint.query_parameters && Object.keys(endpoint.query_parameters).length > 0;
-
-                if (!hasParams && !hasGetParams && !hasQueryParams && !hasUrlParams) {
-                    return '<p>No parameters required</p>';
-                }
-
-                let html = '';
-
-                if (hasUrlParams) {
-                    html += '<h4>URL Parameters</h4>';
-                    html += generateParamTable(endpoint.urlparams);
-                }
-
-                if (hasGetParams) {
-                    html += '<h4>GET Parameters</h4>';
-                    html += generateParamTable(endpoint.get_parameters);
-                }
-
-                if (hasParams) {
-                    html += '<h4>Body Parameters</h4>';
-                    html += generateParamTable(endpoint.parameters);
-                }
-
-                if (hasQueryParams) {
-                    html += '<h4>Query Parameters</h4>';
-                    if (endpoint.query_parameters.filters) {
-                        html += '<h5>Filters</h5>';
-                        html += generateParamTable(endpoint.query_parameters.filters);
-                    }
-                    if (endpoint.query_parameters.sort) {
-                        html += '<h5>Sort</h5>';
-                        html += generateParamTable(endpoint.query_parameters.sort);
-                    }
-                    if (endpoint.query_parameters.search) {
-                        html += '<h5>Search</h5>';
-                        html += generateParamTable(endpoint.query_parameters.search);
-                    }
-                }
-
-                return html;
-            }
-
-            function generateParamTable(params) {
-                let html = `
-                    <table class="parameter-table">
-                        <tr><th>Parameter</th><th>Type</th><th>Required</th></tr>
-                `;
-                
-                for (const [name, param] of Object.entries(params)) {
-                    const required = param.required ? '<span class="required">*</span>' : '';
-                    html += `
-                        <tr>
-                            <td>\${name}\${required}</td>
-                            <td>\${param.type}</td>
-                            <td>\${param.required ? 'Yes' : 'No'}</td>
-                        </tr>
-                    `;
-                }
-                
-                html += '</table>';
-                return html;
-            }
+            {$parameterTableJs}
 
             function formatJson(json) {
                 if (!json) return 'No example response available';
@@ -718,133 +673,7 @@ class Documentation
         JS;
     }
 
-    /**
-     * @param array<string, array{description: string, endpoints: array<string, array{method: string, url: string, description: string, parameters?: array<string, array{type: string, required: bool}>, urlparams?: array<string, array{type: string, required: bool}>, query_parameters?: array<string, array<string, array{type: string, required: bool}>>, response?: string|false}>}> $documentation
-     */
-    private function generateParameterTable(array $method): string
-    {
-        $hasParams = isset($method['parameters']) && !empty($method['parameters']);
-        $hasGetParams = isset($method['get_parameters']) && !empty($method['get_parameters']);
-        $hasUrlParams = isset($method['urlparams']) && !empty($method['urlparams']);
-        $hasQueryParams = isset($method['query_parameters']) && !empty($method['query_parameters']);
 
-        if (!$hasParams && !$hasGetParams && !$hasQueryParams && !$hasUrlParams) {
-            return '<p>No parameters required</p>';
-        }
-
-        $html = '';
-
-        // URL Parameters
-        if ($hasUrlParams) {
-            $html .= '<h4>URL Parameters</h4>';
-            $html .= '<table class="parameter-table">';
-            $html .= '<tr><th>Parameter</th><th>Type</th><th>Required</th></tr>';
-            
-            foreach ($method['urlparams'] as $name => $param) {
-                $required = $param['required'] ? '<span class="required">*</span>' : '';
-                $html .= sprintf(
-                    '<tr><td>%s%s</td><td>%s</td><td>%s</td></tr>',
-                    htmlspecialchars($name),
-                    $required,
-                    htmlspecialchars($param['type']),
-                    $param['required'] ? 'Yes' : 'No'
-                );
-            }
-            
-            $html .= '</table>';
-        }
-
-        // GET Parameters
-        if ($hasGetParams && isset($method['get_parameters'])) {
-            $html .= '<h4>GET Parameters</h4>';
-            $html .= '<table class="parameter-table">';
-            $html .= '<tr><th>Parameter</th><th>Type</th><th>Required</th></tr>';
-            
-            foreach ($method['get_parameters'] as $name => $param) {
-                $required = $param['required'] ? '<span class="required">*</span>' : '';
-                $html .= sprintf(
-                    '<tr><td>%s%s</td><td>%s</td><td>%s</td></tr>',
-                    htmlspecialchars($name),
-                    $required,
-                    htmlspecialchars($param['type']),
-                    $param['required'] ? 'Yes' : 'No'
-                );
-            }
-            
-            $html .= '</table>';
-        }
-
-        // Regular Parameters
-        if ($hasParams && isset($method['parameters'])) {
-            $html .= '<h4>Body Parameters</h4>';
-            $html .= '<table class="parameter-table">';
-            $html .= '<tr><th>Parameter</th><th>Type</th><th>Required</th></tr>';
-            
-            foreach ($method['parameters'] as $name => $param) {
-                $required = $param['required'] ? '<span class="required">*</span>' : '';
-                $html .= sprintf(
-                    '<tr><td>%s%s</td><td>%s</td><td>%s</td></tr>',
-                    htmlspecialchars($name),
-                    $required,
-                    htmlspecialchars($param['type']),
-                    $param['required'] ? 'Yes' : 'No'
-                );
-            }
-            
-            $html .= '</table>';
-        }
-
-        // Query Parameters
-        if ($hasQueryParams) {
-            if ($hasParams) {
-                $html .= '<div style="margin-top: 20px;"></div>';
-            }
-            $html .= '<h4>Query Parameters</h4>';
-            
-            // Handle filters
-            if (!empty($method['query_parameters']['filters'])) {
-                $html .= '<h5>Filters</h5>';
-                $html .= $this->generateSubParameterTable($method['query_parameters']['filters']);
-            }
-
-            // Handle sort
-            if (!empty($method['query_parameters']['sort'])) {
-                $html .= '<h5>Sort</h5>';
-                $html .= $this->generateSubParameterTable($method['query_parameters']['sort']);
-            }
-
-            // Handle search
-            if (!empty($method['query_parameters']['search'])) {
-                $html .= '<h5>Search</h5>';
-                $html .= $this->generateSubParameterTable($method['query_parameters']['search']);
-            }
-        }
-
-        return $html;
-    }
-
-    /**
-     * @param array<string, array{type: string, required: bool}> $params
-     */
-    private function generateSubParameterTable(array $params): string
-    {
-        $html = '<table class="parameter-table">';
-        $html .= '<tr><th>Parameter</th><th>Type</th><th>Required</th></tr>';
-        
-        foreach ($params as $name => $param) {
-            $required = $param['required'] ? '<span class="required">*</span>' : '';
-            $html .= sprintf(
-                '<tr><td>%s%s</td><td>%s</td><td>%s</td></tr>',
-                htmlspecialchars($name),
-                $required,
-                htmlspecialchars($param['type']),
-                $param['required'] ? 'Yes' : 'No'
-            );
-        }
-        
-        $html .= '</table>';
-        return $html;
-    }
 
     /**
      * @param string|false|null $json
@@ -867,13 +696,6 @@ class Documentation
         return trim($json);
     }
 
-    private function formatDescription(string $description): string
-    {
-        // Convert line breaks to <br> tags and escape HTML
-        $description = htmlspecialchars($description, ENT_QUOTES | ENT_HTML5);
-        $description = nl2br($description);
-        return $description;
-    }
 
     public function show(): JsonResponse
     {

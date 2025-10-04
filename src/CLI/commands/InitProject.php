@@ -20,6 +20,7 @@ class InitProject extends Command
     private string $basePath;
     private string $packagePath;
     private bool $nonInteractive = false;
+    /** @phpstan-ignore-next-line */
     private ?string $templateName = null;
     private FileSystemManager $fileSystem;
     
@@ -53,7 +54,7 @@ class InitProject extends Command
     ];
     
     
-    public function execute()
+    public function execute(): mixed
     {
         $this->initializeProject();
         
@@ -72,6 +73,8 @@ class InitProject extends Command
         } catch (\Exception $e) {
             $this->error("Project initialization failed: " . $e->getMessage());
         }
+        
+        return null;
     }
     
     /**
@@ -195,12 +198,15 @@ class InitProject extends Command
         $this->info("⚙️ Configuring PSR-4 autoload...");
         
         // Read existing composer.json
+        /** @var array<string, mixed> $composerJson */
         $composerJson = [];
         if (file_exists($composerJsonPath)) {
             $content = file_get_contents($composerJsonPath);
             if ($content !== false) {
-                $composerJson = json_decode($content, true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
+                $decoded = json_decode($content, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $composerJson = $decoded;
+                } else {
                     $this->warning("Failed to parse existing composer.json, will create new one");
                     $composerJson = [];
                 }
@@ -213,8 +219,14 @@ class InitProject extends Command
         }
         
         // Ensure PSR-4 section exists
+        // @phpstan-ignore-next-line
         if (!isset($composerJson['autoload']['psr-4'])) {
+            // @phpstan-ignore-next-line
             $composerJson['autoload']['psr-4'] = [];
+        }
+        
+        if (!is_array($composerJson['autoload'])) {
+            $composerJson['autoload'] = [];
         }
         
         // Add PSR-4 mappings if they don't exist
@@ -243,6 +255,10 @@ class InitProject extends Command
         $this->info("🔄 Finalizing autoload...");
         
         $currentDir = getcwd();
+        if ($currentDir === false) {
+            $this->warning("Could not get current directory, skipping composer dump-autoload");
+            return;
+        }
         chdir($this->basePath);
         
         $output = [];
@@ -422,10 +438,14 @@ EOT;
     {
         echo "Would you like to create a global 'gemvc' command? (y/N): ";
         $handle = fopen("php://stdin", "r");
+        if ($handle === false) {
+            $this->info("Skipping global installation (stdin error)");
+            return;
+        }
         $line = fgets($handle);
         fclose($handle);
         
-        if (strtolower(trim($line)) !== 'y') {
+        if ($line === false || strtolower(trim($line)) !== 'y') {
             $this->displayAlternativeUsage();
             return;
         }
@@ -466,6 +486,10 @@ EOT;
                 
                 try {
                     $realPath = realpath($wrapperPath);
+                    if ($realPath === false) {
+                        $this->warning("Could not resolve real path for: {$wrapperPath}");
+                        continue;
+                    }
                     if (symlink($realPath, $globalBinPath)) {
                         $this->success("Created global command: {$globalBinPath}");
                         return;

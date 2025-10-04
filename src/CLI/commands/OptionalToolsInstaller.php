@@ -26,7 +26,7 @@ class OptionalToolsInstaller extends Command
     /**
      * Required by Command abstract class
      */
-    public function execute()
+    public function execute(): mixed
     {
         throw new \RuntimeException("OptionalToolsInstaller should not be executed directly. Use offerOptionalTools() method instead.");
     }
@@ -59,8 +59,13 @@ class OptionalToolsInstaller extends Command
         
         echo "\n\033[1;36mInstall PHPStan? (y/N):\033[0m ";
         $handle = fopen("php://stdin", "r");
-        $choice = trim(fgets($handle));
+        if ($handle === false) {
+            $this->error("Failed to open stdin");
+            return;
+        }
+        $line = fgets($handle);
         fclose($handle);
+        $choice = $line !== false ? trim($line) : '';
         
         if (strtolower($choice) === 'y') {
             $this->installPhpstan();
@@ -87,8 +92,13 @@ class OptionalToolsInstaller extends Command
         echo "\n\033[1;36mEnter choice (1-3):\033[0m ";
         
         $handle = fopen("php://stdin", "r");
-        $choice = trim(fgets($handle));
+        if ($handle === false) {
+            $this->error("Failed to open stdin");
+            return;
+        }
+        $line = fgets($handle);
         fclose($handle);
+        $choice = $line !== false ? trim($line) : '';
         
         switch ($choice) {
             case '1':
@@ -175,11 +185,18 @@ class OptionalToolsInstaller extends Command
         $returnCode = 0;
         
         $currentDir = getcwd();
-        chdir($this->basePath);
+        if ($currentDir === false) {
+            throw new \RuntimeException("Could not get current directory");
+        }
+        if (chdir($this->basePath) === false) {
+            throw new \RuntimeException("Could not change to directory: {$this->basePath}");
+        }
         
         exec("composer {$command} 2>&1", $output, $returnCode);
         
-        chdir($currentDir);
+        if (chdir($currentDir) === false) {
+            throw new \RuntimeException("Could not restore directory: {$currentDir}");
+        }
         
         if ($returnCode !== 0) {
             $this->warning("Failed to run composer command. Error output:");
@@ -267,13 +284,20 @@ class OptionalToolsInstaller extends Command
         $this->info("Initializing Pest...");
         
         $currentDir = getcwd();
-        chdir($this->basePath);
+        if ($currentDir === false) {
+            throw new \RuntimeException("Could not get current directory");
+        }
+        if (chdir($this->basePath) === false) {
+            throw new \RuntimeException("Could not change to directory: {$this->basePath}");
+        }
         
         $output = [];
         $returnCode = 0;
         exec('./vendor/bin/pest --init 2>&1', $output, $returnCode);
         
-        chdir($currentDir);
+        if (chdir($currentDir) === false) {
+            throw new \RuntimeException("Could not restore directory: {$currentDir}");
+        }
         
         if ($returnCode !== 0) {
             $this->warning("Failed to initialize Pest. Error output:");

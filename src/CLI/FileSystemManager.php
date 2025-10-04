@@ -25,7 +25,7 @@ class FileSystemManager extends Command
     /**
      * Required by Command abstract class
      */
-    public function execute()
+    public function execute(): mixed
     {
         throw new \RuntimeException("FileSystemManager should not be executed directly. Use its methods instead.");
     }
@@ -53,6 +53,9 @@ class FileSystemManager extends Command
     
     /**
      * Create multiple directories
+     */
+    /**
+     * @param array<string> $paths
      */
     public function createDirectories(array $paths): void
     {
@@ -133,10 +136,13 @@ class FileSystemManager extends Command
         echo "File already exists: {$filePath}" . PHP_EOL;
         echo "Do you want to overwrite it? (y/N): ";
         $handle = fopen("php://stdin", "r");
+        if ($handle === false) {
+            return false;
+        }
         $line = fgets($handle);
         fclose($handle);
         
-        return strtolower(trim($line)) === 'y';
+        return $line !== false && strtolower(trim($line)) === 'y';
     }
     
     /**

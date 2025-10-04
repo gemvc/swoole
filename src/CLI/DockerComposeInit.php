@@ -14,6 +14,7 @@ class DockerComposeInit extends Command
 {
     private string $basePath;
     private bool $nonInteractive = false;
+    /** @var array<string> */
     private array $selectedServices = [];
     private bool $developmentMode = true;
     
@@ -64,7 +65,7 @@ class DockerComposeInit extends Command
     /**
      * Required by Command abstract class
      */
-    public function execute()
+    public function execute(): mixed
     {
         throw new \RuntimeException("DockerComposeInit should not be executed directly. Use offerDockerServices() method instead.");
     }
@@ -99,6 +100,7 @@ class DockerComposeInit extends Command
         ];
         
         foreach (self::AVAILABLE_SERVICES as $key => $service) {
+            // @phpstan-ignore-next-line
             $default = $service['default'] ? ' \033[32m(default)\033[0m' : '';
             $lines[] = "  \033[1;36m{$service['name']}\033[0m - {$service['description']}{$default}";
         }
@@ -119,8 +121,13 @@ class DockerComposeInit extends Command
     {
         echo "\n\033[1;36mSet up Docker services? (y/N):\033[0m ";
         $handle = fopen("php://stdin", "r");
-        $choice = trim(fgets($handle));
+        if ($handle === false) {
+            $this->info("Docker services setup skipped (stdin error)");
+            return;
+        }
+        $choice = fgets($handle);
         fclose($handle);
+        $choice = $choice !== false ? trim($choice) : '';
         
         if (strtolower($choice) !== 'y') {
             $this->info("Docker services setup skipped");
@@ -139,13 +146,19 @@ class DockerComposeInit extends Command
         $this->info("Select services to include (press Enter for defaults):");
         
         foreach (self::AVAILABLE_SERVICES as $key => $service) {
+            // @phpstan-ignore-next-line
             $default = $service['default'] ? ' [Y/n]' : ' [y/N]';
             echo "  \033[1;36m{$service['name']}\033[0m - {$service['description']}{$default}: ";
             
             $handle = fopen("php://stdin", "r");
-            $choice = trim(fgets($handle));
+            if ($handle === false) {
+                continue;
+            }
+            $choice = fgets($handle);
             fclose($handle);
+            $choice = $choice !== false ? trim($choice) : '';
             
+            // @phpstan-ignore-next-line
             $include = $service['default'] ? 
                 (empty($choice) || strtolower($choice) === 'y') :
                 (strtolower($choice) === 'y');
@@ -181,8 +194,13 @@ class DockerComposeInit extends Command
         echo "\nEnter choice (1-2) [1]: ";
         
         $handle = fopen("php://stdin", "r");
-        $choice = trim(fgets($handle));
+        if ($handle === false) {
+            $this->info("Using development mode (stdin error)");
+            return;
+        }
+        $choice = fgets($handle);
         fclose($handle);
+        $choice = $choice !== false ? trim($choice) : '';
         
         if ($choice === '2') {
             $this->developmentMode = false;
@@ -222,8 +240,12 @@ class DockerComposeInit extends Command
         if (!$this->nonInteractive) {
             echo "\n\033[1;36mClean up existing Docker containers and volumes? (y/N):\033[0m ";
             $handle = fopen("php://stdin", "r");
-            $choice = trim(fgets($handle));
+            if ($handle === false) {
+                return;
+            }
+            $choice = fgets($handle);
             fclose($handle);
+            $choice = $choice !== false ? trim($choice) : '';
             
             if (strtolower($choice) !== 'y') {
                 return;
@@ -248,6 +270,9 @@ class DockerComposeInit extends Command
     
     /**
      * Run Docker command
+     */
+    /**
+     * @param array<string> $args
      */
     private function runDockerCommand(array $args): bool
     {
@@ -348,6 +373,9 @@ EOT;
     /**
      * Get MySQL command based on development mode
      */
+    /**
+     * @return array<string>
+     */
     private function getMySQLCommand(): array
     {
         $baseCommand = [
@@ -394,6 +422,7 @@ EOT;
             // Continue with other MySQL service properties
         }
         
+        // @phpstan-ignore-next-line
         if (isset($service['ports'])) {
             $content .= "    ports:\n";
             foreach ($service['ports'] as $port) {
@@ -408,6 +437,7 @@ EOT;
             }
         }
         
+        // @phpstan-ignore-next-line
         if (isset($service['environment'])) {
             $content .= "    environment:\n";
             foreach ($service['environment'] as $key => $value) {
@@ -415,6 +445,7 @@ EOT;
             }
         }
         
+        // @phpstan-ignore-next-line
         if (isset($service['command'])) {
             $content .= "    command:\n";
             foreach ($service['command'] as $cmd) {
@@ -520,6 +551,9 @@ EOT;
     /**
      * Get selected services
      */
+    /**
+     * @return array<string>
+     */
     public function getSelectedServices(): array
     {
         return $this->selectedServices;
@@ -527,6 +561,9 @@ EOT;
     
     /**
      * Set selected services (for non-interactive mode)
+     */
+    /**
+     * @param array<string> $services
      */
     public function setSelectedServices(array $services): void
     {

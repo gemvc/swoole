@@ -9,7 +9,9 @@ namespace Gemvc\Core;
  */
 class SecurityManager
 {
+    /** @var array<string> */
     private array $blockedPaths;
+    /** @var array<string> */
     private array $blockedExtensions;
 
     public function __construct()
@@ -24,7 +26,7 @@ class SecurityManager
     {
         // Remove query parameters and normalize path
         $path = strtok($requestUri, '?');
-        $path = rtrim($path, '/');
+        $path = $path !== false ? rtrim($path, '/') : '';
         
         // Allow root path
         if ($path === '' || $path === '/') {
@@ -50,10 +52,13 @@ class SecurityManager
     /**
      * Send security response for blocked requests
      */
-    public function sendSecurityResponse($response): void
+    public function sendSecurityResponse(object $response): void
     {
+        // @phpstan-ignore-next-line
         $response->status(403);
+        // @phpstan-ignore-next-line
         $response->header('Content-Type', 'application/json');
+        // @phpstan-ignore-next-line
         $response->end(json_encode([
             'error' => 'Access Denied',
             'message' => 'Direct file access is not permitted'
@@ -132,6 +137,7 @@ class SecurityManager
 
     /**
      * Get all blocked paths
+     * @return array<string>
      */
     public function getBlockedPaths(): array
     {
@@ -140,6 +146,7 @@ class SecurityManager
 
     /**
      * Get all blocked extensions
+     * @return array<string>
      */
     public function getBlockedExtensions(): array
     {

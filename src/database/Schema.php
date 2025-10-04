@@ -93,9 +93,13 @@ class Schema
 abstract class SchemaConstraint
 {
     protected string $type;
+    /** @var string|array<string> */
     protected string|array $columns;
     protected ?string $name = null;
 
+    /**
+     * @param string|array<string> $columns
+     */
     public function __construct(string $type, string|array $columns)
     {
         $this->type = $type;
@@ -124,6 +128,7 @@ abstract class SchemaConstraint
 
     /**
      * Get the column(s) this constraint applies to
+     * @return string|array<string>
      */
     public function getColumns(): string|array
     {
@@ -151,6 +156,9 @@ abstract class SchemaConstraint
  */
 class UniqueConstraint extends SchemaConstraint
 {
+    /**
+     * @param string|array<string> $columns
+     */
     public function __construct(string|array $columns)
     {
         parent::__construct('unique', $columns);
@@ -328,6 +336,9 @@ class IndexConstraint extends SchemaConstraint
 {
     private bool $unique = false;
 
+    /**
+     * @param string|array<string> $columns
+     */
     public function __construct(string|array $columns)
     {
         parent::__construct('index', $columns);
@@ -365,6 +376,9 @@ class IndexConstraint extends SchemaConstraint
  */
 class PrimaryKeyConstraint extends SchemaConstraint
 {
+    /**
+     * @param string|array<string> $columns
+     */
     public function __construct(string|array $columns)
     {
         parent::__construct('primary', $columns);
@@ -433,6 +447,9 @@ class CheckConstraint extends SchemaConstraint
  */
 class FulltextConstraint extends SchemaConstraint
 {
+    /**
+     * @param string|array<string> $columns
+     */
     public function __construct(string|array $columns)
     {
         parent::__construct('fulltext', $columns);

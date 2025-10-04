@@ -8,7 +8,7 @@ use Gemvc\Helper\ProjectHelper;
 
 class DbList extends Command
 {
-    public function execute()
+    public function execute(): void
     {
         try {
             $this->info("Fetching database tables...");
@@ -18,7 +18,7 @@ class DbList extends Command
             
             // Get database name from environment
             $dbName = $_ENV['DB_NAME'] ?? null;
-            if (!$dbName) {
+            if (!$dbName || !is_string($dbName)) {
                 throw new \Exception("Database name not found in configuration (DB_NAME)");
             }
             
@@ -31,6 +31,9 @@ class DbList extends Command
             
             // Get all tables
             $stmt = $pdo->query("SHOW TABLES FROM `{$dbName}`");
+            if ($stmt === false) {
+                throw new \Exception("Failed to query database tables");
+            }
             $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
             
             if (empty($tables)) {
@@ -45,6 +48,10 @@ class DbList extends Command
                 
                 // Get columns for this table
                 $stmt = $pdo->query("SHOW COLUMNS FROM `{$table}`");
+                if ($stmt === false) {
+                    $this->warning("Failed to get columns for table: {$table}");
+                    continue;
+                }
                 $columns = $stmt->fetchAll(\PDO::FETCH_ASSOC);
                 
                 if (empty($columns)) {

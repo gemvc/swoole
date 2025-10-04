@@ -8,16 +8,20 @@ use Gemvc\CLI\Commands\DbConnect;
 
 class DbInit extends Command
 {
-    public function execute()
+    public function execute(): mixed
     {
         ProjectHelper::loadEnv();
         try {
             $this->info("Initializing database...");
             $pdo = DbConnect::connectAsRoot();
             if(!$pdo){
-                return;
+                return null;
             }   
             $dbName = $_ENV['DB_NAME'];
+            if (!is_string($dbName)) {
+                $this->error("Database name not found in environment variables");
+                return null;
+            }
             $sql = "CREATE DATABASE IF NOT EXISTS `{$dbName}`";
             $pdo->exec($sql);
             
@@ -26,5 +30,7 @@ class DbInit extends Command
         } catch (\Exception $e) {
             $this->error("Failed to initialize database: " . $e->getMessage());
         }
+        
+        return null;
     }
 } 

@@ -161,7 +161,7 @@ class QueryBuilder
      * Set an error message at the builder level with optional context
      * 
      * @param string|null $error Error message to set
-     * @param array $context Additional context information
+     * @param array<string, mixed> $context Additional context information
      */
     public function setError(?string $error, array $context = []): void
     {
@@ -205,6 +205,7 @@ class QueryBuilder
             $this->setError($this->pdoQuery->getError());
         }
         
+        /** @var PdoQuery */
         return $this->pdoQuery;
     }
 
@@ -249,10 +250,11 @@ class QueryBuilder
             return false;
         }
         
-        $result = $this->pdoQuery->commit();
+        $pdoQuery = $this->getPdoQuery();
+        $result = $pdoQuery->commit();
         if (!$result) {
             // Propagate error from PdoQuery
-            $pdoError = $this->pdoQuery->getError();
+            $pdoError = $pdoQuery->getError();
             $this->setError("Failed to commit transaction" . ($pdoError ? ": " . $pdoError : ''));
         }
         return $result;
@@ -272,10 +274,11 @@ class QueryBuilder
             return false;
         }
         
-        $result = $this->pdoQuery->rollback();
+        $pdoQuery = $this->getPdoQuery();
+        $result = $pdoQuery->rollback();
         if (!$result) {
             // Propagate error from PdoQuery
-            $pdoError = $this->pdoQuery->getError();
+            $pdoError = $pdoQuery->getError();
             $this->setError("Failed to rollback transaction" . ($pdoError ? ": " . $pdoError : ''));
         }
         return $result;

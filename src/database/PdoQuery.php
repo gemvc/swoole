@@ -16,8 +16,6 @@ class PdoQuery
     /** @var bool Whether we have an active database connection */
     private bool $isConnected = false;
 
-    /** @var string|null Stores the last error message */
-    private ?string $error = null;
 
     /**
      * Clean constructor - no parameters needed!
@@ -44,6 +42,7 @@ class PdoQuery
             $this->setError($this->executer->getError());
         }
         
+        /** @var QueryExecuter */
         return $this->executer;
     }
 
@@ -257,7 +256,7 @@ class PdoQuery
      * 
      * @param string $query The SQL SELECT query
      * @param array<string, mixed> $params Key-value pairs for parameter binding
-     * @return array|null Array of objects (empty array if no results), null on error
+     * @return array<object>|null Array of objects (empty array if no results), null on error
      */
     public function selectQueryObjects(string $query, array $params = []): array|null
     {
@@ -289,7 +288,7 @@ class PdoQuery
      * 
      * @param string $query The SQL SELECT query
      * @param array<string, mixed> $params Key-value pairs for parameter binding
-     * @return array|null Array of rows (empty array if no results), null on error
+     * @return array<array<string, mixed>>|null Array of rows (empty array if no results), null on error
      */
     public function selectQuery(string $query, array $params = []): array|null
     {
@@ -387,6 +386,7 @@ class PdoQuery
             $result = $executer->execute();
             
             // Propagate execution errors
+            // @phpstan-ignore-next-line
             if (!$result && $executer->getError() !== null) {
                 $this->setError($executer->getError());
             }
@@ -464,25 +464,12 @@ class PdoQuery
      * Set error message
      * 
      * @param string|null $error Error message
+     * @param array<string, mixed> $context
      */
     public function setError(?string $error, array $context = []): void
     {
         if ($this->executer !== null) {
             $this->executer->setError($error, $context);
-        }
-        
-        // Also set local error for immediate access
-        if ($error === null) {
-            $this->error = null;
-            return;
-        }
-        
-        // Add context information to error message
-        if (!empty($context)) {
-            $contextStr = ' [Context: ' . json_encode($context) . ']';
-            $this->error = $error . $contextStr;
-        } else {
-            $this->error = $error;
         }
     }
 
@@ -565,7 +552,9 @@ class PdoQuery
      */
     public function clearError(): void
     {
-        $this->error = null;
+        if ($this->executer !== null) {
+            $this->executer->setError(null);
+        }
     }
 
     /**

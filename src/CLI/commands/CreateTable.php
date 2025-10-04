@@ -6,8 +6,8 @@ use Gemvc\CLI\Commands\BaseCrudGenerator;
 
 class CreateTable extends BaseCrudGenerator
 {
-    protected $serviceName;
-    protected $basePath;
+    protected string $serviceName;
+    protected string $basePath;
 
     /**
      * Format service name to proper case
@@ -22,10 +22,11 @@ class CreateTable extends BaseCrudGenerator
 
     public function execute(): void
     {
-        if (empty($this->args[0])) {
+        if (empty($this->args[0]) || !is_string($this->args[0])) {
             $this->error("Table name is required. Usage: gemvc create:table TableName");
         }
 
+        // @phpstan-ignore-next-line
         $this->serviceName = $this->formatServiceName($this->args[0]);
         $this->basePath = defined('PROJECT_ROOT') ? PROJECT_ROOT : $this->determineProjectRoot();
 

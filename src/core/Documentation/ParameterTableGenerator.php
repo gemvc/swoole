@@ -181,7 +181,7 @@ class ParameterTableGenerator
      */
     public function generateJavaScriptFunction(): string
     {
-        return <<<JS
+        return <<<'JS'
             function generateParameterTable(endpoint) {
                 const hasParams = endpoint.parameters && Object.keys(endpoint.parameters).length > 0;
                 const hasGetParams = endpoint.get_parameters && Object.keys(endpoint.get_parameters).length > 0;
@@ -229,20 +229,20 @@ class ParameterTableGenerator
             }
 
             function generateParamTable(params) {
-                let html = \`
+                let html = `
                     <table class="parameter-table">
                         <tr><th>Parameter</th><th>Type</th><th>Required</th></tr>
-                \`;
+                `;
                 
                 for (const [name, param] of Object.entries(params)) {
                     const required = param.required ? '<span class="required">*</span>' : '';
-                    html += \`
+                    html += `
                         <tr>
-                            <td>\${name}\${required}</td>
-                            <td>\${param.type}</td>
-                            <td>\${param.required ? 'Yes' : 'No'}</td>
+                            <td>${name}${required}</td>
+                            <td>${param.type}</td>
+                            <td>${param.required ? 'Yes' : 'No'}</td>
                         </tr>
-                    \`;
+                    `;
                 }
                 
                 html += '</table>';

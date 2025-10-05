@@ -5,7 +5,6 @@ namespace Gemvc\Core;
 use Gemvc\Helper\ProjectHelper;
 use Gemvc\Http\SwooleRequest;
 use Gemvc\Core\SwooleBootstrap;
-use Gemvc\Core\ServerConfig;
 use Gemvc\Core\SecurityManager;
 use Gemvc\Core\HotReloadManager;
 
@@ -18,7 +17,7 @@ class OpenSwooleServer
 {
     /** @var \OpenSwoole\HTTP\Server */
     private $server;
-    private ServerConfig $config;
+    private SwooleServerConfig $config;
     private SecurityManager $security;
     private HotReloadManager $hotReload;
 
@@ -91,7 +90,7 @@ class OpenSwooleServer
      */
     private function initializeComponents(): void
     {
-        $this->config = new ServerConfig();
+        $this->config = new SwooleServerConfig();
         $this->security = new SecurityManager();
         $this->hotReload = new HotReloadManager();
     }

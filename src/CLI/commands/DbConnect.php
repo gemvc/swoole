@@ -86,7 +86,7 @@ class DbConnect extends Command
         }
     }
 
-    public function execute(): mixed
+    public function execute(): PDO|null
     {
         $this->info(" Test Connecting to the database...");
 

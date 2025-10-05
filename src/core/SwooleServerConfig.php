@@ -7,7 +7,7 @@ namespace Gemvc\Core;
  * 
  * Handles all OpenSwoole server configuration and environment settings
  */
-class ServerConfig
+class SwooleServerConfig
 {
     /** @var array<string, mixed> */
     private array $config;

@@ -2,7 +2,6 @@
 
 namespace Gemvc\Database;
 use Gemvc\Database\QueryExecuter;
-use Gemvc\Database\DatabaseManager;
 
 /**
  * PdoQuery uses QueryExecuter as a component with lazy loading to provide high-level methods for common database operations

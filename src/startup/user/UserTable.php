@@ -8,6 +8,7 @@ namespace App\Table;
 
 use Gemvc\Database\Table;
 use Gemvc\Database\Schema;
+use Gemvc\Database\TableQuery;
 
 /**
  * User table class for handling User database operations
@@ -16,7 +17,7 @@ use Gemvc\Database\Schema;
  * @property string $name User's name column name in database table
  * @property string $description User's description column description in database table
  */
-class UserTable extends Table
+class UserTable extends TableQuery
 {
     public int $id;
     public string $name;
@@ -25,6 +26,12 @@ class UserTable extends Table
     //password is not shown in the result of the select query , but this property can be setted trough setPassword() method in the UserModel class
     protected string $password;
 
+    /**
+     * Summary of type mapping for properties
+     * it is used to map the properties to the database columns
+     * it is used in the TableGenerator class to generate the schema for the table
+     * @var array
+     */
     protected array $_type_map = [
         'id' => 'int',
         'name' => 'string',
@@ -32,6 +39,41 @@ class UserTable extends Table
         'description' => 'string',
         'password' => 'string',
     ];
+    /*
+    * Summary of defineSchema() method
+     * it is used to map the properties to the database columns
+     * it is used in the TableGenerator class to generate the schema for the table
+
+    protected function defineSchema(): array 
+    {
+        return [
+            // Primary key with auto increment
+            Schema::primary('id'),
+            Schema::autoIncrement('id'),
+            
+            // Unique constraints
+            Schema::unique('email'),                    // Single column unique
+            Schema::unique(['name', 'email']),          // Composite unique
+            
+            // Foreign keys with different actions
+            Schema::foreignKey('role_id', 'roles.id')->onDeleteRestrict(),
+            Schema::foreignKey('parent_id', 'users.id')->onDeleteCascade(),
+            Schema::foreignKey('category_id', 'categories.id')->onDeleteSetNull(),
+            
+            // Indexes for performance
+            Schema::index('email'),                     // Single column index
+            Schema::index(['name', 'is_active']),       // Composite index
+            Schema::index('created_at')->name('idx_created'),  // Named index
+            
+            // Check constraints for data validation
+            Schema::check('age >= 18')->name('valid_age'),
+            Schema::check('salary > 0'),
+            
+            // Full-text search
+            Schema::fulltext(['name', 'description'])
+        ];
+    }
+        */
 
     public function __construct()
     {

@@ -48,7 +48,7 @@ class QueryExecuter
      */
     private function getConnection(string $poolName = 'default'): ?Connection
     {
-        $manager = DatabaseManager::getInstance();
+        $manager = SwooleDatabaseManager::getInstance();
         $conn = $manager->getConnection($poolName);
         
         // Propagate error from DatabaseManager to QueryExecuter

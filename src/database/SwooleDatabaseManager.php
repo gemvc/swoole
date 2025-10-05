@@ -18,12 +18,12 @@ use Gemvc\Helper\ProjectHelper;
  * This class is self-contained and uses a singleton pattern for OpenSwoole.
  * It automatically loads configuration from .env and manages the connection pool.
  */
-class DatabaseManager
+class SwooleDatabaseManager
 {
     /**
-     * @var DatabaseManager|null Singleton instance for OpenSwoole
+     * @var SwooleDatabaseManager|null Singleton instance for OpenSwoole
      */
-    private static ?DatabaseManager $instance = null;
+    private static ?SwooleDatabaseManager $instance = null;
 
     /**
      * @var Container The DI container from Hyperf.
@@ -134,9 +134,9 @@ class DatabaseManager
      * Get the singleton instance of DatabaseManager.
      * This ensures only one pool exists per OpenSwoole worker process.
      * 
-     * @return DatabaseManager The singleton instance
+     * @return SwooleDatabaseManager The singleton instance
      */
-    public static function getInstance(): DatabaseManager
+    public static function getInstance(): SwooleDatabaseManager
     {
         if (self::$instance === null) {
             self::$instance = new self();

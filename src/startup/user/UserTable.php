@@ -8,7 +8,6 @@ namespace App\Table;
 
 use Gemvc\Database\Table;
 use Gemvc\Database\Schema;
-use Gemvc\Database\TableQuery;
 
 /**
  * User table class for handling User database operations
@@ -17,7 +16,7 @@ use Gemvc\Database\TableQuery;
  * @property string $name User's name column name in database table
  * @property string $description User's description column description in database table
  */
-class UserTable extends TableQuery
+class UserTable extends Table
 {
     public int $id;
     public string $name;

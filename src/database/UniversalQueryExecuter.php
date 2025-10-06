@@ -5,14 +5,20 @@ namespace Gemvc\Database;
 use PDO;
 use PDOStatement;
 use Throwable;
-use Hyperf\DbConnection\Connection;
 
 /**
- * Executes database queries using a connection from the DatabaseManager pool.
- * This class acts as a wrapper around PDO, providing transaction management,
- * and simplifying query execution and result fetching.
+ * Universal Query Executer for Multiple Web Server Environments
+ * 
+ * This class provides a unified interface for database query execution
+ * across different web server environments:
+ * - Apache PHP-FPM
+ * - Nginx PHP-FPM  
+ * - OpenSwoole
+ * 
+ * It automatically detects the environment and uses the appropriate
+ * database manager implementation.
  */
-class QueryExecuter
+class UniversalQueryExecuter
 {
     private ?string $error = null;
     private int $affectedRows = 0;
@@ -25,46 +31,45 @@ class QueryExecuter
     private array $bindings = [];
     private bool $inTransaction = false;
 
-    /** @var Connection|null The database connection from the Hyperf pool. */
-    private ?Connection $db = null;
+    /** @var \PDO|null The database connection */
+    private ?\PDO $db = null;
+
+    /** @var DatabaseManagerInterface The database manager */
+    private DatabaseManagerInterface $dbManager;
 
     /**
-     * Clean constructor - automatically uses the singleton DatabaseManager.
-     * In OpenSwoole, the DatabaseManager singleton is shared across all requests
-     * within the same worker process, providing efficient connection pooling.
+     * Constructor - automatically detects environment and uses appropriate manager
      */
     public function __construct()
     {
         $this->startExecutionTime = microtime(true);
-        // No parameters needed - connection management is handled internally
+        $this->dbManager = DatabaseManagerFactory::getManager();
     }
 
     /**
-     * Get a connection from the pool when needed.
-     * This lazily accesses the DatabaseManager singleton.
+     * Get a connection from the appropriate manager
      * 
      * @param string $poolName The connection pool name (default: 'default')
-     * @return Connection|null A connection from the pool, or null on error
+     * @return \PDO|null A PDO connection, or null on error
      */
-    private function getConnection(string $poolName = 'default'): ?Connection
+    private function getConnection(string $poolName = 'default'): ?\PDO
     {
-        $manager = SwooleDatabaseManager::getInstance();
-        $conn = $manager->getConnection($poolName);
+        $conn = $this->dbManager->getConnection($poolName);
         
         // Propagate error from DatabaseManager to QueryExecuter
         if ($conn === null) {
-            $this->setError('Connection error: ' . ($manager->getError() ?? 'Unknown error'));
+            $this->setError('Connection error: ' . ($this->dbManager->getError() ?? 'Unknown error'));
         }
         
         return $conn;
     }
 
     /**
-     * Destructor ensures that resources are cleaned up.
+     * Destructor ensures that resources are cleaned up
      */
     public function __destruct()
     {
-        // Force rollback if a transaction is still open when the object is destroyed.
+        // Force rollback if a transaction is still open when the object is destroyed
         $this->secure(true);
     }
 
@@ -105,9 +110,9 @@ class QueryExecuter
     }
 
     /**
-     * Prepares a new SQL query for execution.
+     * Prepares a new SQL query for execution
      *
-     * @param string $query The SQL query string.
+     * @param string $query The SQL query string
      */
     public function query(string $query): void
     {
@@ -138,8 +143,7 @@ class QueryExecuter
                     return;
                 }
             }
-            // @phpstan-ignore-next-line
-            $this->statement = $this->db->getPdo()->prepare($query);
+            $this->statement = $this->db->prepare($query);
         } catch (Throwable $e) {
             $this->setError('Error preparing statement: ' . $e->getMessage());
             $this->releaseConnection(true); // Release potentially broken connection
@@ -147,10 +151,10 @@ class QueryExecuter
     }
 
     /**
-     * Binds a value to a corresponding named or question mark placeholder in the SQL statement.
+     * Binds a value to a corresponding named or question mark placeholder in the SQL statement
      *
-     * @param string $param Parameter identifier.
-     * @param mixed $value The value to bind to the parameter.
+     * @param string $param Parameter identifier
+     * @param mixed $value The value to bind to the parameter
      */
     public function bind(string $param, mixed $value): void
     {
@@ -177,9 +181,9 @@ class QueryExecuter
     }
 
     /**
-     * Executes the prepared statement.
+     * Executes the prepared statement
      *
-     * @return bool Returns TRUE on success or FALSE on failure.
+     * @return bool Returns TRUE on success or FALSE on failure
      */
     public function execute(): bool
     {
@@ -196,9 +200,8 @@ class QueryExecuter
         try {
             $this->statement->execute();
             $this->affectedRows = $this->statement->rowCount();
-            if (stripos(trim($this->query), 'INSERT') === 0) {
-                 // @phpstan-ignore-next-line
-                 $this->lastInsertedId = $this->db->getPdo()->lastInsertId();
+            if (stripos(trim($this->query), 'INSERT') === 0 && $this->db !== null) {
+                $this->lastInsertedId = $this->db->lastInsertId();
             }
             $this->endExecutionTime = microtime(true);
             
@@ -220,7 +223,7 @@ class QueryExecuter
             ];
             
             $errorDetails = json_encode(['message' => $e->getMessage(), 'code' => $e->getCode(), 'query' => $this->query, 'bindings' => $this->bindings]);
-            error_log("QueryExecuter::execute() - PDO Exception: " . $errorDetails);
+            error_log("UniversalQueryExecuter::execute() - PDO Exception: " . $errorDetails);
             
             $this->setError($e->getMessage(), $context);
             $this->endExecutionTime = microtime(true);
@@ -321,9 +324,9 @@ class QueryExecuter
     }
 
     /**
-     * Fetches a single row as an associative array.
+     * Fetches a single row as an associative array
      *
-     * @return array<string, mixed>|false Returns the row as an associative array, or false on failure.
+     * @return array<string, mixed>|false Returns the row as an associative array, or false on failure
      */
     public function fetchOne(): array|false
     {
@@ -362,8 +365,7 @@ class QueryExecuter
                 // Error already set by getConnection()
                 return false;
             }
-            // @phpstan-ignore-next-line
-            $this->db->getPdo()->beginTransaction();
+            $this->db->beginTransaction();
             $this->inTransaction = true;
             return true;
         } catch (Throwable $e) {
@@ -377,8 +379,7 @@ class QueryExecuter
     {
         if (!$this->inTransaction || !$this->db) { $this->setError('No active transaction to commit'); return false; }
         try {
-            // @phpstan-ignore-next-line
-            $this->db->getPdo()->commit();
+            $this->db->commit();
             $this->inTransaction = false;
             return true;
         } catch (Throwable $e) {
@@ -393,8 +394,7 @@ class QueryExecuter
     {
         if (!$this->inTransaction || !$this->db) { $this->setError('No active transaction to rollback'); return false; }
         try {
-            // @phpstan-ignore-next-line
-            $this->db->getPdo()->rollBack();
+            $this->db->rollBack();
             $this->inTransaction = false;
             return true;
         } catch (Throwable $e) {
@@ -406,14 +406,13 @@ class QueryExecuter
     }
 
     /**
-     * Securely clean up database resources.
+     * Securely clean up database resources
      */
     public function secure(bool $forceRollback = false): void
     {
         if ($this->inTransaction && $this->db && $forceRollback) {
             try {
-                // @phpstan-ignore-next-line
-            $this->db->getPdo()->rollBack();
+                $this->db->rollBack();
                 $this->debug("Transaction rolled back in secure()");
             } catch (Throwable $e) {
                 error_log('Error during forced rollback in secure(): ' . $e->getMessage());
@@ -423,7 +422,7 @@ class QueryExecuter
     }
 
     /**
-     * Release the current database connection back to the pool.
+     * Release the current database connection back to the pool
      */
     private function releaseConnection(bool $isBroken = false): void
     {
@@ -433,7 +432,7 @@ class QueryExecuter
         }
         if ($this->db) {
             try {
-                $this->db->release();
+                $this->dbManager->releaseConnection($this->db);
                 if ($isBroken) {
                     $this->debug("Broken connection released back to pool.");
                 }
@@ -443,5 +442,15 @@ class QueryExecuter
         }
         $this->db = null;
         $this->inTransaction = false;
+    }
+
+    /**
+     * Get information about the current database manager
+     * 
+     * @return array<string, mixed> Manager information
+     */
+    public function getManagerInfo(): array
+    {
+        return DatabaseManagerFactory::getManagerInfo();
     }
 }

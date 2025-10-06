@@ -1,16 +1,21 @@
 <?php
 
 namespace Gemvc\Database;
-use Gemvc\Database\QueryExecuter;
+use Gemvc\Database\UniversalQueryExecuter;
 
 /**
- * PdoQuery uses QueryExecuter as a component with lazy loading to provide high-level methods for common database operations
+ * PdoQuery uses UniversalQueryExecuter as a component with lazy loading to provide high-level methods for common database operations
  * All methods follow the unified return pattern: result|null where null indicates error and result indicates success
+ * 
+ * This class now works across all web server environments:
+ * - OpenSwoole (with connection pooling)
+ * - Apache PHP-FPM (with simple PDO)
+ * - Nginx PHP-FPM (with simple PDO)
  */
 class PdoQuery
 {
-    /** @var QueryExecuter|null Lazy-loaded query executor */
-    private ?QueryExecuter $executer = null;
+    /** @var UniversalQueryExecuter|null Lazy-loaded universal query executor */
+    private ?UniversalQueryExecuter $executer = null;
     
     /** @var bool Whether we have an active database connection */
     private bool $isConnected = false;
@@ -18,30 +23,30 @@ class PdoQuery
 
     /**
      * Clean constructor - no parameters needed!
-     * Everything is handled automatically through the singleton DatabaseManager.
+     * Everything is handled automatically through the universal database interface.
      */
     public function __construct()
     {
-        // No configuration needed - QueryExecuter handles everything
+        // No configuration needed - UniversalQueryExecuter handles everything
     }
 
     /**
-     * Lazy initialization of QueryExecuter.
-     * Connection is automatically acquired from the pool when needed.
+     * Lazy initialization of UniversalQueryExecuter.
+     * Connection is automatically acquired from the appropriate manager when needed.
      */
-    private function getExecuter(): QueryExecuter
+    private function getExecuter(): UniversalQueryExecuter
     {
         if ($this->executer === null) {
-            $this->executer = new QueryExecuter();
+            $this->executer = new UniversalQueryExecuter();
             $this->isConnected = true;
         }
         
-        // Propagate errors from QueryExecuter to PdoQuery
+        // Propagate errors from UniversalQueryExecuter to PdoQuery
         if ($this->executer->getError() !== null) {
             $this->setError($this->executer->getError());
         }
         
-        /** @var QueryExecuter */
+        /** @var UniversalQueryExecuter */
         return $this->executer;
     }
 
@@ -90,7 +95,7 @@ class PdoQuery
             $this->handleInsertError($e);
             return null;
         } finally {
-            // Ensure connection is returned to Hyperf pool
+            // Ensure connection is returned to the appropriate pool
             // secure(false) releases connection without forcing rollback
             if ($this->executer !== null) {
                 $this->getExecuter()->secure(!$success);
@@ -157,7 +162,7 @@ class PdoQuery
             $this->handleUpdateError($e);
             return null;
         } finally {
-            // Ensure connection is returned to Hyperf pool
+            // Ensure connection is returned to the appropriate pool
             if ($this->executer !== null) {
                 $this->getExecuter()->secure(!$success);
             }
@@ -215,7 +220,7 @@ class PdoQuery
             $this->handleDeleteError($e);
             return null;
         } finally {
-            // Ensure connection is returned to Hyperf pool
+            // Ensure connection is returned to the appropriate pool
             if ($this->executer !== null) {
                 $this->getExecuter()->secure(!$success);
             }
@@ -274,7 +279,7 @@ class PdoQuery
             $this->handleQueryError('Select objects', $e);
             return null;
         } finally {
-            // Ensure connection is returned to Hyperf pool for SELECT queries
+            // Ensure connection is returned to the appropriate pool for SELECT queries
             // secure(false) releases without rollback
             if ($this->executer !== null) {
                 $this->getExecuter()->secure(false);
@@ -306,7 +311,7 @@ class PdoQuery
             $this->handleQueryError('Select', $e);
             return null;
         } finally {
-            // Ensure connection is returned to Hyperf pool for SELECT queries
+            // Ensure connection is returned to the appropriate pool for SELECT queries
             // secure(false) releases without rollback
             if ($this->executer !== null) {
                 $this->getExecuter()->secure(false);
@@ -343,7 +348,7 @@ class PdoQuery
             $this->handleQueryError('Count', $e);
             return null;
         } finally {
-            // Ensure connection is returned to Hyperf pool for COUNT queries
+            // Ensure connection is returned to the appropriate pool for COUNT queries
             // secure(false) releases without rollback
             if ($this->executer !== null) {
                 $this->getExecuter()->secure(false);
@@ -544,6 +549,21 @@ class PdoQuery
             return false;
         }
         return $this->executer->rollback();
+    }
+
+    /**
+     * Get information about the current database environment
+     * 
+     * @return array<string, mixed> Environment information
+     */
+    public function getEnvironmentInfo(): array
+    {
+        if ($this->executer !== null) {
+            return $this->executer->getManagerInfo();
+        }
+        
+        // If no executer yet, get info directly from factory
+        return DatabaseManagerFactory::getManagerInfo();
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace Gemvc\Database;
 
 use PDO;
+use Gemvc\Core\WebserverDetector;
 
 /**
  * Database Manager Factory with Performance Optimization
@@ -79,66 +80,13 @@ class DatabaseManagerFactory
     private static function getCachedEnvironment(): string
     {
         if (!self::$detectionPerformed) {
-            self::$cachedEnvironment = self::detectEnvironment();
+            self::$cachedEnvironment = WebserverDetector::get();
             self::$detectionPerformed = true;
         }
         
         return self::$cachedEnvironment ?? 'apache';
     }
 
-    /**
-     * Fast environment detection with optimized checks
-     * 
-     * @return string The detected environment
-     */
-    private static function detectEnvironment(): string
-    {
-        // Fast-path: Check environment variable first (fastest)
-        $envType = $_ENV['WEBSERVER_TYPE'] ?? null;
-        if ($envType === 'swoole') {
-            return 'swoole';
-        }
-        if ($envType === 'apache') {
-            return 'apache';
-        }
-        if ($envType === 'nginx') {
-            return 'nginx';
-        }
-
-        // Fast-path: Check Swoole constants (very fast)
-        if (defined('SWOOLE_BASE') || defined('SWOOLE_PROCESS')) {
-            return 'swoole';
-        }
-
-        // Medium-path: Check server software (moderate speed)
-        if (isset($_SERVER['SERVER_SOFTWARE']) && is_string($_SERVER['SERVER_SOFTWARE'])) {
-            $serverSoftware = strtolower($_SERVER['SERVER_SOFTWARE']);
-            if (strpos($serverSoftware, 'nginx') !== false) {
-                return 'nginx';
-            }
-            if (strpos($serverSoftware, 'apache') !== false) {
-                return 'apache';
-            }
-        }
-
-        // Slow-path: Check Swoole classes (slowest - only if needed)
-        if (class_exists('\OpenSwoole\Server', false) || class_exists('\Swoole\Server', false)) {
-            return 'swoole';
-        }
-
-        // Slow-path: Check Swoole functions (slow - only if needed)
-        if (function_exists('OpenSwoole\Coroutine::getCid') || function_exists('Swoole\Coroutine::getCid')) {
-            return 'swoole';
-        }
-
-        // Heuristic checks (fast)
-        if (isset($_SERVER['HTTP_X_FORWARDED_FOR']) || isset($_SERVER['HTTP_X_REAL_IP'])) {
-            return 'nginx'; // Nginx often sets these headers
-        }
-
-        // Default fallback
-        return 'apache';
-    }
 
     /**
      * Create Swoole database manager
@@ -234,7 +182,9 @@ class DatabaseManagerFactory
     public static function forceDetection(): string
     {
         self::$detectionPerformed = false;
-        return self::getCachedEnvironment();
+        self::$cachedEnvironment = WebserverDetector::forceRefresh();
+        self::$detectionPerformed = true;
+        return self::$cachedEnvironment;
     }
 
     /**
@@ -244,16 +194,9 @@ class DatabaseManagerFactory
      */
     public static function getPerformanceMetrics(): array
     {
-        $start = microtime(true);
-        $environment = self::forceDetection();
-        $detectionTime = (microtime(true) - $start) * 1000; // Convert to milliseconds
-        
-        return [
-            'detection_time_ms' => round($detectionTime, 3),
-            'environment' => $environment,
-            'cached' => self::$detectionPerformed,
-            'performance_level' => $detectionTime < 0.1 ? 'excellent' : ($detectionTime < 1 ? 'good' : 'needs_optimization')
-        ];
+        $metrics = WebserverDetector::getMetrics();
+        $metrics['detection_cached'] = self::$detectionPerformed;
+        return $metrics;
     }
 }
 

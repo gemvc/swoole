@@ -137,7 +137,7 @@ abstract class BaseGenerator extends Command
     /**
      * Execute the command
      * 
-     * @return void
+     * @return bool
      */
-    abstract public function execute(): void;
+    abstract public function execute(): bool;
 } 

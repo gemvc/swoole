@@ -54,7 +54,7 @@ class InitProject extends Command
     ];
     
     
-    public function execute(): mixed
+    public function execute(): bool
     {
         $this->initializeProject();
         
@@ -73,8 +73,7 @@ class InitProject extends Command
         } catch (\Exception $e) {
             $this->error("Project initialization failed: " . $e->getMessage());
         }
-        
-        return null;
+        return true;
     }
     
     /**

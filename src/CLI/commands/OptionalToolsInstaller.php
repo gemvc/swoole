@@ -26,9 +26,10 @@ class OptionalToolsInstaller extends Command
     /**
      * Required by Command abstract class
      */
-    public function execute(): mixed
+    public function execute(): bool
     {
-        throw new \RuntimeException("OptionalToolsInstaller should not be executed directly. Use offerOptionalTools() method instead.");
+        $this->error("OptionalToolsInstaller should not be executed directly. Use offerOptionalTools() method instead.");
+        return false;
     }
     
     /**

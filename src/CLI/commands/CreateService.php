@@ -44,13 +44,12 @@ class CreateService extends BaseCrudGenerator
         }
     }
 
-    public function execute(): void
+    public function execute(): bool
     {
         if (empty($this->args[0]) || !is_string($this->args[0])) {
             $this->error("Service name is required. Usage: gemvc create:service ServiceName [-c|-m|-t]");
+            return false;
         }
-
-        // @phpstan-ignore-next-line
         $this->serviceName = $this->formatServiceName($this->args[0]);
         $this->basePath = defined('PROJECT_ROOT') ? PROJECT_ROOT : $this->determineProjectRoot();
         $this->parseFlags();
@@ -74,9 +73,11 @@ class CreateService extends BaseCrudGenerator
             }
 
             $this->success("Service {$this->serviceName} created successfully!");
+            return true;
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
+        return false;
     }
 
 
@@ -113,7 +114,7 @@ class CreateService extends BaseCrudGenerator
         $this->writeFile($path, $content, "Model");
     }
 
-    protected function createTable(): void
+    protected function createTable(): bool
     {
         $template = $this->getTemplate('table');
         $content = $this->replaceTemplateVariables($template, [
@@ -123,6 +124,7 @@ class CreateService extends BaseCrudGenerator
 
         $path = $this->basePath . "/app/table/{$this->serviceName}Table.php";
         $this->writeFile($path, $content, "Table");
+        return true;
     }
 
     protected function determineProjectRoot(): string

@@ -127,12 +127,12 @@ abstract class BaseCrudGenerator extends BaseGenerator
     /**
      * Create table file
      * 
-     * @return void
+     * @return bool
      */
-    protected function createTable(): void
+    protected function createTable(): bool
     {
         if (!$this->flags['table']) {
-            return;
+            return false;
         }
 
         $template = $this->getTemplate('table');
@@ -143,5 +143,6 @@ abstract class BaseCrudGenerator extends BaseGenerator
 
         $path = $this->getBasePath() . "/app/table/{$this->serviceName}Table.php";
         $this->writeFile($path, $content, "Table");
+        return true;
     }
 } 

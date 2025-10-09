@@ -25,9 +25,10 @@ class FileSystemManager extends Command
     /**
      * Required by Command abstract class
      */
-    public function execute(): mixed
+    public function execute(): bool
     {
-        throw new \RuntimeException("FileSystemManager should not be executed directly. Use its methods instead.");
+        $this->error("FileSystemManager should not be executed directly. Use its methods instead.");
+        return false;
     }
     
     /**

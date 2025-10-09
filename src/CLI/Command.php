@@ -19,8 +19,7 @@ abstract class Command
         $this->options = $options;
     }
 
-    abstract public function execute(): mixed;
-
+    abstract public function execute(): bool;
     private function supportsAnsiColors(): bool
     {
         if (DIRECTORY_SEPARATOR === '\\') {

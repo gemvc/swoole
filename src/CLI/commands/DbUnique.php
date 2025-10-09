@@ -24,14 +24,14 @@ class DbUnique extends Command
     /**
      * Execute the command to add a unique constraint to a table column.
      *
-     * @return mixed
+     * @return bool
      */
-    public function execute(): mixed
+    public function execute(): bool
     {
         // Check for required argument
         if (empty($this->args[0]) || !is_string($this->args[0])) {
             $this->error("Usage: gemvc db:unique table/column");
-            return null;
+            return false;
         }
 
         // Parse table and columns from argument (format: table/col1,col2,...)
@@ -40,7 +40,7 @@ class DbUnique extends Command
         // @phpstan-ignore-next-line
         if (!$table || count($columnList) === 0) {
             $this->error("Invalid format. Use: gemvc db:unique table/col1,col2,...");
-            return null;
+            return false;
         }
 
         // Load environment variables and connect to the database
@@ -48,7 +48,7 @@ class DbUnique extends Command
         $pdo = DbConnect::connect();
         if (!$pdo) {
             $this->error("Could not connect to database.");
-            return null;
+            return false;
         }
 
         // Check for duplicate combinations
@@ -57,7 +57,7 @@ class DbUnique extends Command
         $stmt = $pdo->query($sql);
         if ($stmt === false) {
             $this->error("Failed to check for duplicates");
-            return null;
+            return false;
         }
         $duplicates = $stmt->fetchAll();
         if ($duplicates) {
@@ -68,8 +68,8 @@ class DbUnique extends Command
                     $values[] = $col . '=' . $row[$col];
                 }
                 $this->write("Duplicate: " . implode(', ', $values));
+                return false;
             }
-            return null;
         }
 
         // Try to add the unique constraint
@@ -78,10 +78,10 @@ class DbUnique extends Command
         try {
             $pdo->exec("ALTER TABLE `$table` ADD CONSTRAINT `$constraintName` UNIQUE ($colSqlBacktick)");
             $this->success("Unique constraint added to `$table` on (" . implode(', ', $columnList) . ") successfully!");
+            return true;
         } catch (\PDOException $e) {
             $this->error("Failed to add unique constraint: " . $e->getMessage());
+            return false;
         }
-        
-        return null;
     }
 }

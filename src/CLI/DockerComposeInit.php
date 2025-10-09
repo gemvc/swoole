@@ -65,9 +65,10 @@ class DockerComposeInit extends Command
     /**
      * Required by Command abstract class
      */
-    public function execute(): mixed
+    public function execute(): bool
     {
-        throw new \RuntimeException("DockerComposeInit should not be executed directly. Use offerDockerServices() method instead.");
+        $this->error("DockerComposeInit should not be executed directly. Use offerDockerServices() method instead.");
+        return false;
     }
     
     /**

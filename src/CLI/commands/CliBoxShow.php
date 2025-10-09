@@ -126,10 +126,10 @@ class CliBoxShow extends Command
     /**
      * Required execute method (not used in utility class)
      */
-    public function execute(): mixed
+    public function execute(): bool
     {
         // This is a utility class, not a command
         $this->error("CliBoxShow is a utility class and should not be executed directly.");
-        return null;
+        return false;
     }
 }

@@ -20,13 +20,12 @@ class CreateTable extends BaseCrudGenerator
         return ucfirst(strtolower($name));
     }
 
-    public function execute(): void
+    public function execute(): bool
     {
         if (empty($this->args[0]) || !is_string($this->args[0])) {
             $this->error("Table name is required. Usage: gemvc create:table TableName");
+            return false;
         }
-
-        // @phpstan-ignore-next-line
         $this->serviceName = $this->formatServiceName($this->args[0]);
         $this->basePath = defined('PROJECT_ROOT') ? PROJECT_ROOT : $this->determineProjectRoot();
 
@@ -38,13 +37,16 @@ class CreateTable extends BaseCrudGenerator
             $this->createTable();
 
             $this->success("Table {$this->serviceName} created successfully!");
+            return true;
         } catch (\Exception $e) {
             $this->error($e->getMessage());
+            
         }
+        return false;
     }
 
 
-    protected function createTable(): void
+    protected function createTable(): bool
     {
         $template = $this->getTemplate('table');
         $content = $this->replaceTemplateVariables($template, [
@@ -54,6 +56,7 @@ class CreateTable extends BaseCrudGenerator
 
         $path = $this->basePath . "/app/table/{$this->serviceName}Table.php";
         $this->writeFile($path, $content, "Table");
+        return true;
     }
 
     protected function determineProjectRoot(): string

@@ -21,7 +21,7 @@ class DbMigrate extends Command
     - Apply schema constraints (unique, foreign keys, indexes, etc.)
     - Remove obsolete constraints (with --sync-schema flag)";
 
-    public function execute(): mixed
+    public function execute(): bool
     {
         try {
             ProjectHelper::loadEnv();

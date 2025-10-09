@@ -10,19 +10,19 @@ class DbDescribe extends Command
 {
     protected string $description = "Describe a specific database table structure in detail. Shows columns, indexes, foreign keys, and table statistics.";
 
-    public function execute(): void
+    public function execute(): bool
     {
         try {
             // Check if table name is provided
             if (empty($this->args[0])) {
                 $this->error("Table name is required. Usage: gemvc db:describe TableName");
-                return;
+                return false;
             }
 
             $tableName = $this->args[0];
             if (!is_string($tableName)) {
                 $this->error("Table name must be a string");
-                return;
+                return false;
             }
             
             // Load environment variables
@@ -37,7 +37,8 @@ class DbDescribe extends Command
             // Get database connection
             $pdo = DbConnect::connect();
             if (!$pdo) {
-                return;
+                $this->error("Failed to connect to database");
+                return false;
             }
 
             // Check if table exists
@@ -45,7 +46,7 @@ class DbDescribe extends Command
             $stmt->execute([$tableName]);
             if ($stmt->rowCount() === 0) {
                 $this->error("Table '{$tableName}' not found in database '" . (string) $dbName . "'");
-                return;
+                return false;
             }
 
             $this->displayTableHeader($tableName);
@@ -66,9 +67,10 @@ class DbDescribe extends Command
             $this->showTableOptions($pdo, $tableName, $dbName);
 
             $this->write("\n");
-            
+            return true;
         } catch (\Exception $e) {
             $this->error("Failed to describe table: " . $e->getMessage());
+            return false;
         }
     }
 

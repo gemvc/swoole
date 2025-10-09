@@ -86,11 +86,17 @@ class DbConnect extends Command
         }
     }
 
-    public function execute(): PDO|null
+    public function execute(): bool
     {
         $this->info(" Test Connecting to the database...");
-
-        return self::connect();
+        $pdo = self::connect();
+        if($pdo){
+            $this->success("Connected to the database successfully",false);
+            return true;
+        }else{
+            $this->error("Failed to connect to the database");
+            return false;
+        }
     }
 
 

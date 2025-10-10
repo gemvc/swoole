@@ -35,7 +35,7 @@ class TableGenerator {
      * @param string|null $tableName The name of the table to create
      * @return bool True if the table was created successfully, false otherwise
      */
-    public function createTableFromObject(object $object, string $tableName = null): bool {
+    public function createTableFromObject(object $object, ?string $tableName = null): bool {
         if (!$tableName) {
             if (!method_exists($object, 'getTable')) {
                 $this->error = 'public function getTable() not found in object';
@@ -391,7 +391,7 @@ class TableGenerator {
      */
     public function updateTable(
         object $object,
-        string $tableName = null,
+        ?string $tableName = null,
         bool $removeExtraColumns = false,
         bool $enforceNotNull = false,
         $defaultValue = null

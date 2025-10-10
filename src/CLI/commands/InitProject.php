@@ -149,6 +149,9 @@ class InitProject extends Command
         
         // Check for --server=<name> flag
         foreach ($this->args as $arg) {
+            if (!is_string($arg)) {
+                continue;
+            }
             if (strpos($arg, '--server=') === 0) {
                 $serverName = substr($arg, 9);
                 switch (strtolower($serverName)) {
@@ -199,9 +202,9 @@ class InitProject extends Command
                 return '1'; // Default to Swoole
             }
             
-            $line = fgets($handle);
-            fclose($handle);
-            
+        $line = fgets($handle);
+        fclose($handle);
+        
             $choice = $line !== false ? trim($line) : '';
             
             // Default to OpenSwoole if empty
@@ -229,11 +232,22 @@ class InitProject extends Command
     private function executeWebserverInit(array $webserver): bool
     {
         $this->write("\n", 'white');
-        $this->info("Initializing {$webserver['name']} project...");
+        
+        // Validate webserver name
+        $webserverName = isset($webserver['name']) && is_string($webserver['name']) 
+            ? $webserver['name'] 
+            : 'Unknown';
+        $this->info("Initializing {$webserverName} project...");
         $this->write("\n", 'white');
         
         // Get the class name
         $className = $webserver['class'];
+        
+        // Validate class name is string
+        if (!is_string($className)) {
+            $this->error("Invalid class configuration");
+            return false;
+        }
         
         // Check if class exists
         if (!class_exists($className)) {
@@ -245,7 +259,9 @@ class InitProject extends Command
         // Create instance and execute
         try {
             // Pass through all args and options to the webserver init
+            /** @var Command $initCommand */
             $initCommand = new $className($this->args, $this->options);
+            
             return $initCommand->execute();
         } catch (\Exception $e) {
             $this->error("Failed to initialize project: " . $e->getMessage());

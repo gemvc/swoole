@@ -15,7 +15,7 @@ use Gemvc\CLI\DockerComposeInit;
  * Optimized version with improved code organization, reduced duplication,
  * and better error handling.
  */
-class InitProject extends Command
+class InitProject_old extends Command
 {
     private string $basePath;
     private string $packagePath;

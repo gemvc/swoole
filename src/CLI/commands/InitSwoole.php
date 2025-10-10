@@ -88,16 +88,30 @@ class InitSwoole extends AbstractInit
      * 
      * @return string
      */
+    public function __construct(array $args = [], array $options = [])
+    {
+        parent::__construct($args, $options);
+        $this->setPackageName('swoole');
+    }
+    
     protected function getStartupTemplatePath(): string
     {
-        // Try OpenSwoole-specific path first
-        $swoolePath = $this->packagePath . '/src/startup/swoole';
-        if (is_dir($swoolePath)) {
-            return $swoolePath;
+        $webserverType = strtolower($this->getWebserverType());
+        
+        // Try webserver-specific path first
+        $webserverPath = $this->packagePath . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup' . DIRECTORY_SEPARATOR . $webserverType;
+        if (is_dir($webserverPath)) {
+            return $webserverPath;
+        }
+        
+        // Try Composer package path with package name from property
+        $composerWebserverPath = dirname(dirname(dirname(dirname(__DIR__)))) . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'gemvc' . DIRECTORY_SEPARATOR . $this->packageName . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup' . DIRECTORY_SEPARATOR . $webserverType;
+        if (is_dir($composerWebserverPath)) {
+            return $composerWebserverPath;
         }
         
         // Fallback to default startup path (current structure)
-        return $this->packagePath . '/src/startup';
+        return $this->packagePath . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup';
     }
     
     /**

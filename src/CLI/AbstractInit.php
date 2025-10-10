@@ -23,6 +23,7 @@ abstract class AbstractInit extends Command
 {
     protected string $basePath;
     protected string $packagePath;
+    protected string $packageName = 'swoole';
     protected bool $nonInteractive = false;
     protected FileSystemManager $fileSystem;
     
@@ -168,6 +169,17 @@ abstract class AbstractInit extends Command
     }
     
     /**
+     * Set package name (called by subclasses)
+     * 
+     * @param string $packageName
+     * @return void
+     */
+    protected function setPackageName(string $packageName): void
+    {
+        $this->packageName = $packageName;
+    }
+    
+    /**
      * Setup the basic project structure
      * 
      * @return void
@@ -210,7 +222,16 @@ abstract class AbstractInit extends Command
     {
         $this->info("📄 Copying common project files...");
         $startupPath = $this->findStartupPath();
+        
+        // Copy webserver-specific files
+        $this->copyTemplateFiles($startupPath);
+        
+        // Copy common files from common directory
+        $this->copyCommonFiles();
+        
+        // Copy user files to app directory
         $this->copyUserFiles($startupPath);
+        
         $this->info("✅ Common files copied");
     }
     
@@ -222,23 +243,83 @@ abstract class AbstractInit extends Command
      */
     protected function findStartupPath(): string
     {
-        $webserverTemplatePath = $this->getStartupTemplatePath();
+        $webserverType = strtolower($this->getWebserverType());
         
-        $potentialPaths = [
-            $webserverTemplatePath,
-            $this->packagePath . '/src/startup',
-            $this->packagePath . '/startup',
-            dirname(dirname(dirname(__DIR__))) . '/startup'
+        // Try webserver-specific startup path first
+        $webserverSpecificPaths = [
+            $this->packagePath . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup' . DIRECTORY_SEPARATOR . $webserverType,
+            // Also try with package name from property
+            dirname(dirname(dirname(dirname(__DIR__)))) . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'gemvc' . DIRECTORY_SEPARATOR . $this->packageName . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup' . DIRECTORY_SEPARATOR . $webserverType
         ];
         
-        foreach ($potentialPaths as $path) {
+        foreach ($webserverSpecificPaths as $path) {
             if (is_dir($path)) {
-                $this->info("Found startup directory: {$path}");
+                $this->info("Found {$webserverType} startup directory: {$path}");
                 return $path;
             }
         }
         
-        throw new \RuntimeException("Startup directory not found. Tried: " . implode(", ", $potentialPaths));
+        // Fallback to old structure
+        $fallbackPaths = [
+            $this->packagePath . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup',
+            $this->packagePath . DIRECTORY_SEPARATOR . 'startup',
+            dirname(dirname(dirname(__DIR__))) . DIRECTORY_SEPARATOR . 'startup',
+            dirname(dirname(dirname(dirname(__DIR__)))) . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'gemvc' . DIRECTORY_SEPARATOR . $this->packageName . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup'
+        ];
+        
+        foreach ($fallbackPaths as $path) {
+            if (is_dir($path)) {
+                $this->info("Found fallback startup directory: {$path}");
+                return $path;
+            }
+        }
+        
+        throw new \RuntimeException("Startup directory not found for {$webserverType}. Tried: " . implode(", ", array_merge($webserverSpecificPaths, $fallbackPaths)));
+    }
+    
+    /**
+     * Copy common files from common directory
+     * 
+     * @return void
+     */
+    protected function copyCommonFiles(): void
+    {
+        $commonPath = $this->packagePath . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup' . DIRECTORY_SEPARATOR . 'common';
+        
+        // Try Composer package path with package name from property
+        if (!is_dir($commonPath)) {
+            $commonPath = dirname(dirname(dirname(dirname(__DIR__)))) . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'gemvc' . DIRECTORY_SEPARATOR . $this->packageName . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup' . DIRECTORY_SEPARATOR . 'common';
+        }
+        
+        if (!is_dir($commonPath)) {
+            $this->warning("Common directory not found: {$commonPath}");
+            return;
+        }
+        
+        $this->info("Copying common files from: {$commonPath}");
+        
+        // Copy .env.example
+        $envSource = $commonPath . DIRECTORY_SEPARATOR . '.env.example';
+        $envDest = $this->basePath . DIRECTORY_SEPARATOR . '.env.example';
+        if (file_exists($envSource)) {
+            copy($envSource, $envDest);
+            $this->info("Copied .env.example");
+        }
+        
+        // Copy phpstan.neon
+        $phpstanSource = $commonPath . DIRECTORY_SEPARATOR . 'phpstan.neon';
+        $phpstanDest = $this->basePath . DIRECTORY_SEPARATOR . 'phpstan.neon';
+        if (file_exists($phpstanSource)) {
+            copy($phpstanSource, $phpstanDest);
+            $this->info("Copied phpstan.neon");
+        }
+        
+        // Copy user directory
+        $userSource = $commonPath . DIRECTORY_SEPARATOR . 'user';
+        $userDest = $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'user';
+        if (is_dir($userSource)) {
+            $this->copyDirectoryIfExists($userSource, $userDest, 'User files');
+        }
     }
     
     /**
@@ -722,6 +803,7 @@ EOT;
         return getcwd() ?: '.';
     }
     
+    
     /**
      * Determine package path
      * 
@@ -729,22 +811,32 @@ EOT;
      */
     protected function determinePackagePath(): string
     {
-        $paths = [
+        // First, try to detect if we're running from a Composer package installation
+        $composerPath = dirname(dirname(dirname(dirname(__DIR__)))) . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'gemvc' . DIRECTORY_SEPARATOR . $this->packageName;
+        
+        if (is_dir($composerPath . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup')) {
+            $this->info("Using Composer package path: {$composerPath}");
+            return $composerPath;
+        }
+        
+        // Fallback to development paths
+        $devPaths = [
             dirname(dirname(dirname(__DIR__))),
-            dirname(dirname(dirname(dirname(__DIR__)))) . '/gemvc/library',
-            dirname(dirname(dirname(dirname(__DIR__)))) . '/gemvc/framework'
+            dirname(dirname(dirname(dirname(__DIR__)))) . DIRECTORY_SEPARATOR . 'gemvc' . DIRECTORY_SEPARATOR . 'library',
+            dirname(dirname(dirname(dirname(__DIR__)))) . DIRECTORY_SEPARATOR . 'gemvc' . DIRECTORY_SEPARATOR . 'framework',
+            dirname(dirname(dirname(dirname(__DIR__)))) . DIRECTORY_SEPARATOR . 'gemvc' . DIRECTORY_SEPARATOR . $this->packageName
         ];
         
-        foreach ($paths as $path) {
-            if (file_exists($path)) {
-                $this->info("Using package path: {$path}");
+        foreach ($devPaths as $path) {
+            if (file_exists($path . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup')) {
+                $this->info("Using development package path: {$path}");
                 return $path;
             }
         }
         
         $currentDir = dirname(dirname(dirname(__FILE__)));
         $this->warning("Using fallback package path: {$currentDir}");
-        return dirname($currentDir);
+        return $currentDir;
     }
     
     /**

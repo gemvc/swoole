@@ -5,6 +5,8 @@ namespace Gemvc\Database;
 /**
  * Schema constraint builder for defining database table constraints
  * Used in Table classes to define schema constraints that are applied during migrations
+ * also it is used in the TableGenerator class to generate the schema for the table
+ * is has unique constraints, foreign key constraints, indexes, primary key, auto increment, check constraints, fulltext constraints
  */
 class Schema
 {

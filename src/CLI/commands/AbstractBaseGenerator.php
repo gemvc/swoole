@@ -5,7 +5,7 @@ namespace Gemvc\CLI\Commands;
 use Gemvc\CLI\Command;
 use Gemvc\CLI\FileSystemManager;
 
-abstract class BaseGenerator extends Command
+abstract class AbstractBaseGenerator extends Command
 {
     protected string $serviceName;
     protected string $basePath;

@@ -2,10 +2,10 @@
 
 namespace Gemvc\CLI\Commands;
 
-use Gemvc\CLI\Commands\BaseCrudGenerator;
+use Gemvc\CLI\Commands\AbstractBaseCrudGenerator;
 use Gemvc\CLI\Commands\CreateService;
 
-class CreateCrud extends BaseCrudGenerator
+class CreateCrud extends AbstractBaseCrudGenerator
 {
     public function execute(): bool
     {

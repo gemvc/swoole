@@ -2,9 +2,9 @@
 
 namespace Gemvc\CLI\Commands;
 
-use Gemvc\CLI\Commands\BaseCrudGenerator;
+use Gemvc\CLI\Commands\AbstractBaseCrudGenerator;
 
-class CreateController extends BaseCrudGenerator
+class CreateController extends AbstractBaseCrudGenerator
 {
     protected string $serviceName;
     protected string $basePath;

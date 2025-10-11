@@ -29,6 +29,7 @@ class InitProject extends Command
         '1' => [
             'name' => 'OpenSwoole',
             'class' => InitSwoole::class,
+            'package' => 'gemvc/swoole',
             'description' => 'High-performance async server with WebSocket support',
             'status' => 'available',
             'icon' => '🚀'
@@ -36,6 +37,7 @@ class InitProject extends Command
         '2' => [
             'name' => 'Apache',
             'class' => 'Gemvc\CLI\Commands\InitApache',
+            'package' => 'gemvc/apache',
             'description' => 'Traditional PHP hosting with mod_php or PHP-FPM',
             'status' => 'coming_soon',
             'icon' => '🔶'
@@ -43,6 +45,7 @@ class InitProject extends Command
         '3' => [
             'name' => 'Nginx',
             'class' => 'Gemvc\CLI\Commands\InitNginx',
+            'package' => 'gemvc/nginx',
             'description' => 'Modern web server with PHP-FPM',
             'status' => 'coming_soon',
             'icon' => '🔷'
@@ -237,7 +240,19 @@ class InitProject extends Command
         $webserverName = isset($webserver['name']) && is_string($webserver['name']) 
             ? $webserver['name'] 
             : 'Unknown';
+        $packageName = isset($webserver['package']) && is_string($webserver['package']) 
+            ? $webserver['package'] 
+            : null;
+        
         $this->info("Initializing {$webserverName} project...");
+        
+        // Check if specific package is required and not installed
+        if ($packageName !== null && !$this->isPackageInstalled($packageName)) {
+            if (!$this->offerPackageInstallation($packageName, $webserverName)) {
+                return false;
+            }
+        }
+        
         $this->write("\n", 'white');
         
         // Get the class name
@@ -265,6 +280,87 @@ class InitProject extends Command
             return $initCommand->execute();
         } catch (\Exception $e) {
             $this->error("Failed to initialize project: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if a package is installed
+     * 
+     * @param string $packageName
+     * @return bool
+     */
+    private function isPackageInstalled(string $packageName): bool
+    {
+        $composerLockFile = getcwd() . '/composer.lock';
+        if (!file_exists($composerLockFile)) {
+            return false;
+        }
+        
+        $lockContent = file_get_contents($composerLockFile);
+        if ($lockContent === false) {
+            return false;
+        }
+        
+        return strpos($lockContent, '"name": "' . $packageName . '"') !== false;
+    }
+    
+    /**
+     * Offer to install required package
+     * 
+     * @param string $packageName
+     * @param string $webserverName
+     * @return bool
+     */
+    private function offerPackageInstallation(string $packageName, string $webserverName): bool
+    {
+        $this->warning("Package {$packageName} is required for {$webserverName} but not installed.");
+        
+        if (in_array('--non-interactive', $this->args) || in_array('-n', $this->args)) {
+            $this->info("Non-interactive mode: attempting automatic installation...");
+            return $this->installPackage($packageName);
+        }
+        
+        $this->info("Would you like to install {$packageName} now? [Y/n]: ");
+        $response = fgets(STDIN);
+        if ($response !== false) {
+            $response = trim($response);
+        } else {
+            $response = '';
+        }
+        
+        if (empty($response) || strtolower($response[0]) === 'y') {
+            return $this->installPackage($packageName);
+        }
+        
+        $this->error("Cannot proceed without {$packageName}. Please install it manually:");
+        $this->info("composer require {$packageName}");
+        return false;
+    }
+    
+    /**
+     * Install package via composer
+     * 
+     * @param string $packageName
+     * @return bool
+     */
+    private function installPackage(string $packageName): bool
+    {
+        $this->info("Installing {$packageName}...");
+        
+        $command = "composer require {$packageName}";
+        $output = [];
+        $returnCode = 0;
+        
+        exec($command . ' 2>&1', $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            $this->info("✅ {$packageName} installed successfully!");
+            return true;
+        } else {
+            $this->error("Failed to install {$packageName}:");
+            $this->error(implode("\n", $output));
+            $this->info("Please install manually: composer require {$packageName}");
             return false;
         }
     }

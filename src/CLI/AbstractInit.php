@@ -314,12 +314,6 @@ abstract class AbstractInit extends Command
             $this->info("Copied phpstan.neon");
         }
         
-        // Copy user directory
-        $userSource = $commonPath . DIRECTORY_SEPARATOR . 'user';
-        $userDest = $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'user';
-        if (is_dir($userSource)) {
-            $this->copyDirectoryIfExists($userSource, $userDest, 'User files');
-        }
     }
     
     /**

@@ -38,7 +38,7 @@ class InitProject extends Command
         '2' => [
             'name' => 'Apache',
             'class' => InitApache::class,
-            'package' => 'gemvc/apache',
+            'package' => null, // No separate package needed - included in gemvc/swoole
             'description' => 'Traditional PHP hosting with mod_php or PHP-FPM',
             'status' => 'available',
             'icon' => '🔶'

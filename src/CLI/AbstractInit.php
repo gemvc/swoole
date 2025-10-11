@@ -223,12 +223,6 @@ abstract class AbstractInit extends Command
         $this->info("📄 Copying common project files...");
         $startupPath = $this->findStartupPath();
         
-        // Copy webserver-specific files
-        $this->copyTemplateFiles($startupPath);
-        
-        // Copy common files from common directory
-        $this->copyCommonFiles();
-        
         // Copy user files to app directory
         $this->copyUserFiles($startupPath);
         

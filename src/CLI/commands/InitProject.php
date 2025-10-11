@@ -4,6 +4,7 @@ namespace Gemvc\CLI\Commands;
 
 use Gemvc\CLI\Command;
 use Gemvc\CLI\Commands\InitSwoole;
+use Gemvc\CLI\Commands\InitApache;
 use Gemvc\CLI\Commands\CliBoxShow;
 
 /**
@@ -36,10 +37,10 @@ class InitProject extends Command
         ],
         '2' => [
             'name' => 'Apache',
-            'class' => 'Gemvc\CLI\Commands\InitApache',
+            'class' => InitApache::class,
             'package' => 'gemvc/apache',
             'description' => 'Traditional PHP hosting with mod_php or PHP-FPM',
-            'status' => 'coming_soon',
+            'status' => 'available',
             'icon' => '🔶'
         ],
         '3' => [

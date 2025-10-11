@@ -29,8 +29,7 @@ class InitApache extends AbstractInit
      * Maps source files to destination paths
      */
     private const APACHE_FILE_MAPPINGS = [
-        'index.php' => 'public/index.php',
-        '.htaccess' => 'public/.htaccess'
+        'appIndex.php' => 'app/api/Index.php'
     ];
     
     /**

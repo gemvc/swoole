@@ -318,7 +318,15 @@ abstract class AbstractInit extends Command
      */
     protected function copyUserFiles(string $startupPath): void
     {
-        $userDir = $startupPath . '/user';
+        // User files are always in common directory (cross-platform)
+        $commonPath = $this->packagePath . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup' . DIRECTORY_SEPARATOR . 'common';
+        
+        // Try Composer package path with package name from property
+        if (!is_dir($commonPath)) {
+            $commonPath = dirname(dirname(dirname(dirname(__DIR__)))) . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'gemvc' . DIRECTORY_SEPARATOR . $this->packageName . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup' . DIRECTORY_SEPARATOR . 'common';
+        }
+        
+        $userDir = $commonPath . DIRECTORY_SEPARATOR . 'user';
         if (!is_dir($userDir)) {
             $this->warning("User template directory not found: {$userDir}");
             return;

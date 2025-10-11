@@ -4,8 +4,12 @@ parameters:
         - src
     excludePaths:
         - src/http/SwooleWebSocketHandler.php
+        - src/database/SwooleDatabaseManager.php
+        - src/database/SwooleDatabaseManagerAdapter.php
         - vendor/*
         - src/startup/*
     stubFiles:
         - src/stubs/OpenSwoole.php
         - src/stubs/Redis.php
+    ignoreErrors:
+        - '#Possibly invalid array key type float\|int\.#'

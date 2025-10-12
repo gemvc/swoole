@@ -71,7 +71,7 @@ abstract class AbstractInit extends Command
             $this->createEnvFile();
             $this->createGlobalCommand();
             $this->finalizeAutoload();
-            // $this->offerDockerServices(); // Commented: docker-compose.yml is now copied from webserver-specific folder
+            $this->offerDockerServices(); // Interactive Docker services selection
             $this->displayNextSteps();
             $this->offerOptionalTools();
             $this->displaySuccessGraphic();

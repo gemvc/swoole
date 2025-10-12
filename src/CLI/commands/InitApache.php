@@ -28,7 +28,9 @@ class InitApache extends AbstractInit
      * Apache-specific file mappings
      * Maps source files to destination paths
      */
-    private const APACHE_FILE_MAPPINGS = [];
+    private const APACHE_FILE_MAPPINGS = [
+        'appIndex.php' => 'app/api/Index.php'
+    ];
     
     /**
      * Constructor - set Apache package name
@@ -83,7 +85,7 @@ class InitApache extends AbstractInit
             '.htaccess',
             'composer.json',
             'Dockerfile',
-            'docker-compose.yml',
+            // 'docker-compose.yml', // Let DockerComposeInit create it with user-selected services
             '.gitignore',
             '.dockerignore'
         ];
@@ -94,6 +96,19 @@ class InitApache extends AbstractInit
             
             if (file_exists($sourceFile)) {
                 $this->fileSystem->copyFileWithConfirmation($sourceFile, $destFile, $file);
+            }
+        }
+        
+        // Copy appIndex.php to app/api/Index.php
+        foreach (self::APACHE_FILE_MAPPINGS as $sourceFileName => $destPath) {
+            $sourceFile = $startupPath . DIRECTORY_SEPARATOR . $sourceFileName;
+            $destFile = $this->basePath . DIRECTORY_SEPARATOR . $destPath;
+            
+            if (file_exists($sourceFile)) {
+                // Ensure directory exists
+                $destDir = dirname($destFile);
+                $this->fileSystem->createDirectoryIfNotExists($destDir);
+                $this->fileSystem->copyFileWithConfirmation($sourceFile, $destFile, $sourceFileName);
             }
         }
         

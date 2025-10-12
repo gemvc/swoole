@@ -70,13 +70,41 @@ class InitSwoole extends AbstractInit
         
         $startupPath = $this->findStartupPath();
         
-        // Copy main template files (index.php, Dockerfile, etc.)
-        $this->copyTemplateFiles($startupPath);
+        // Copy OpenSwoole files to project root
+        $filesToCopy = [
+            'index.php',
+            'Dockerfile',
+            // 'docker-compose.yml', // Let DockerComposeInit create it with user-selected services
+            '.gitignore',
+            '.dockerignore'
+        ];
+        
+        foreach ($filesToCopy as $file) {
+            $sourceFile = $startupPath . DIRECTORY_SEPARATOR . $file;
+            $destFile = $this->basePath . DIRECTORY_SEPARATOR . $file;
+            
+            if (file_exists($sourceFile)) {
+                $this->fileSystem->copyFileWithConfirmation($sourceFile, $destFile, $file);
+            }
+        }
+        
+        // Copy appIndex.php to app/api/Index.php
+        foreach (self::SWOOLE_FILE_MAPPINGS as $sourceFileName => $destPath) {
+            $sourceFile = $startupPath . DIRECTORY_SEPARATOR . $sourceFileName;
+            $destFile = $this->basePath . DIRECTORY_SEPARATOR . $destPath;
+            
+            if (file_exists($sourceFile)) {
+                // Ensure directory exists
+                $destDir = dirname($destFile);
+                $this->fileSystem->createDirectoryIfNotExists($destDir);
+                $this->fileSystem->copyFileWithConfirmation($sourceFile, $destFile, $sourceFileName);
+            }
+        }
         
         // Copy server handlers directory if it exists
         $this->copyDirectoryIfExists(
-            $startupPath . '/server/handlers',
-            $this->basePath . '/server/handlers',
+            $startupPath . DIRECTORY_SEPARATOR . 'server' . DIRECTORY_SEPARATOR . 'handlers',
+            $this->basePath . DIRECTORY_SEPARATOR . 'server' . DIRECTORY_SEPARATOR . 'handlers',
             'Server handlers'
         );
         

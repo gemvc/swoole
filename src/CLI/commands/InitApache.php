@@ -28,9 +28,7 @@ class InitApache extends AbstractInit
      * Apache-specific file mappings
      * Maps source files to destination paths
      */
-    private const APACHE_FILE_MAPPINGS = [
-        'appIndex.php' => 'app/api/Index.php'
-    ];
+    private const APACHE_FILE_MAPPINGS = [];
     
     /**
      * Constructor - set Apache package name
@@ -65,9 +63,11 @@ class InitApache extends AbstractInit
     /**
      * Copy Apache-specific files
      * This includes:
-     * - index.php (Apache bootstrap in public/)
+     * - index.php (Apache bootstrap)
      * - .htaccess (URL rewriting rules)
-     * - public/ directory structure
+     * - .env (from example.env)
+     * - composer.json, Dockerfile, docker-compose.yml
+     * - .gitignore, .dockerignore
      * 
      * @return void
      */
@@ -77,15 +77,32 @@ class InitApache extends AbstractInit
         
         $startupPath = $this->findStartupPath();
         
-        // Copy main template files (index.php, .htaccess, etc.)
-        $this->copyTemplateFiles($startupPath);
+        // Copy all Apache files to project root
+        $filesToCopy = [
+            'index.php',
+            '.htaccess',
+            'composer.json',
+            'Dockerfile',
+            'docker-compose.yml',
+            '.gitignore',
+            '.dockerignore'
+        ];
         
-        // Copy public directory if it exists
-        $this->copyDirectoryIfExists(
-            $startupPath . DIRECTORY_SEPARATOR . 'public',
-            $this->basePath . DIRECTORY_SEPARATOR . 'public',
-            'Public directory'
-        );
+        foreach ($filesToCopy as $file) {
+            $sourceFile = $startupPath . DIRECTORY_SEPARATOR . $file;
+            $destFile = $this->basePath . DIRECTORY_SEPARATOR . $file;
+            
+            if (file_exists($sourceFile)) {
+                $this->fileSystem->copyFileWithConfirmation($sourceFile, $destFile, $file);
+            }
+        }
+        
+        // Copy example.env to .env
+        $envSource = $startupPath . DIRECTORY_SEPARATOR . 'example.env';
+        $envDest = $this->basePath . DIRECTORY_SEPARATOR . '.env';
+        if (file_exists($envSource)) {
+            $this->fileSystem->copyFileWithConfirmation($envSource, $envDest, '.env');
+        }
         
         $this->info("✅ Apache files copied");
     }

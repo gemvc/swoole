@@ -442,8 +442,16 @@ abstract class AbstractInit extends Command
     protected function createEnvFile(): void
     {
         $this->info("🔧 Creating environment file...");
-        $envPath = $this->basePath . '/.env';
-        $exampleEnvPath = $this->packagePath . '/src/startup/example.env';
+        $envPath = $this->basePath . DIRECTORY_SEPARATOR . '.env';
+        
+        // Try webserver-specific example.env first
+        $startupPath = $this->findStartupPath();
+        $exampleEnvPath = $startupPath . DIRECTORY_SEPARATOR . 'example.env';
+        
+        // Fallback to main example.env
+        if (!file_exists($exampleEnvPath)) {
+            $exampleEnvPath = $this->packagePath . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'startup' . DIRECTORY_SEPARATOR . 'example.env';
+        }
         
         if (!file_exists($exampleEnvPath)) {
             throw new \RuntimeException("Example .env file not found: {$exampleEnvPath}");

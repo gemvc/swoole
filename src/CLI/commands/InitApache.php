@@ -97,12 +97,8 @@ class InitApache extends AbstractInit
             }
         }
         
-        // Copy example.env to .env
-        $envSource = $startupPath . DIRECTORY_SEPARATOR . 'example.env';
-        $envDest = $this->basePath . DIRECTORY_SEPARATOR . '.env';
-        if (file_exists($envSource)) {
-            $this->fileSystem->copyFileWithConfirmation($envSource, $envDest, '.env');
-        }
+        // Note: .env is created by createEnvFile() method in AbstractInit
+        // No need to copy it here to avoid duplicate prompts
         
         $this->info("✅ Apache files copied");
     }

@@ -1,64 +1,39 @@
-# GEMVC Apache Configuration
-# URL Rewriting and Security Settings
-
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Redirect to public directory if accessed from root
-    RewriteCond %{REQUEST_URI} !^/public/
-    RewriteRule ^(.*)$ public/$1 [L]
+    RewriteCond %{HTTP:Authorization} ^(.+)$
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
     
-    # Handle Front Controller
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^ index.php [QSA,L]
+    RewriteCond %{REQUEST_FILENAME} !-l
+    RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
 </IfModule>
 
-# Security Headers
-<IfModule mod_headers.c>
-    # Prevent clickjacking
-    Header always set X-Frame-Options "SAMEORIGIN"
-    
-    # XSS Protection
-    Header always set X-XSS-Protection "1; mode=block"
-    
-    # Prevent MIME type sniffing
-    Header always set X-Content-Type-Options "nosniff"
-    
-    # Referrer Policy
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
-</IfModule>
-
-# Disable directory browsing
 Options -Indexes
 
-# Prevent access to sensitive files
-<FilesMatch "^\.">
-    Order allow,deny
-    Deny from all
+AddDefaultCharset UTF-8
+
+<FilesMatch "\.(env|htaccess|ini|log|sh|bak|json|lock)$">
+    Require all denied
 </FilesMatch>
 
-# PHP Settings
-<IfModule mod_php.c>
-    php_value upload_max_filesize 50M
-    php_value post_max_size 50M
-    php_value memory_limit 256M
-    php_value max_execution_time 300
-</IfModule>
+<Directory "app">
+    Require all denied
+</Directory>
 
-# Compression
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
-</IfModule>
+<Directory "vendor">
+    Require all denied
+</Directory>
 
-# Browser Caching
-<IfModule mod_expires.c>
-    ExpiresActive On
-    ExpiresByType image/jpg "access plus 1 year"
-    ExpiresByType image/jpeg "access plus 1 year"
-    ExpiresByType image/gif "access plus 1 year"
-    ExpiresByType image/png "access plus 1 year"
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
-</IfModule>
+<Directory "bin">
+    Require all denied
+</Directory>
 
+<Directory "config">
+    Require all denied
+</Directory> 
+
+<Directory "templates">
+Require all denied
+</Directory> 

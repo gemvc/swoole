@@ -1,39 +1,29 @@
-FROM php:8.2-apache
-
-# Install PHP extensions
-RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    zip \
-    unzip \
-    git \
-    && docker-php-ext-install pdo_mysql zip \
-    && a2enmod rewrite \
-    && a2enmod headers
-
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+FROM secure73/gem_lamp
 
 # Set working directory
 WORKDIR /var/www/html
 
+# Install required PHP extensions
+RUN docker-php-ext-install pdo pdo_mysql
+
+# Enable Apache modules
+RUN a2enmod rewrite
+
 # Copy application files
-COPY . /var/www/html
+COPY . .
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 
-# Update Apache configuration to point to public directory
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+# Configure PHP
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
+    && sed -i 's/upload_max_filesize = 2M/upload_max_filesize = 64M/' "$PHP_INI_DIR/php.ini" \
+    && sed -i 's/post_max_size = 8M/post_max_size = 64M/' "$PHP_INI_DIR/php.ini" \
+    && sed -i 's/memory_limit = 128M/memory_limit = 256M/' "$PHP_INI_DIR/php.ini"
 
-# Install dependencies
-RUN composer install --no-dev --optimize-autoloader
-
-# Expose port 80
+# Expose port
 EXPOSE 80
 
 # Start Apache
 CMD ["apache2-foreground"]
-

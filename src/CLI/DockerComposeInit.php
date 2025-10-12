@@ -17,6 +17,8 @@ class DockerComposeInit extends Command
     /** @var array<string> */
     private array $selectedServices = [];
     private bool $developmentMode = true;
+    private string $webserverType = 'openswoole';
+    private int $webserverPort = 9501;
     
     // Available services configuration
     private const AVAILABLE_SERVICES = [
@@ -56,10 +58,16 @@ class DockerComposeInit extends Command
         ]
     ];
     
-    public function __construct(string $basePath, bool $nonInteractive = false)
-    {
+    public function __construct(
+        string $basePath, 
+        bool $nonInteractive = false, 
+        string $webserverType = 'openswoole', 
+        int $webserverPort = 9501
+    ) {
         $this->basePath = $basePath;
         $this->nonInteractive = $nonInteractive;
+        $this->webserverType = $webserverType;
+        $this->webserverPort = $webserverPort;
     }
     
     /**
@@ -301,8 +309,8 @@ class DockerComposeInit extends Command
     {
         $content = "services:\n";
         
-        // Add OpenSwoole service
-        $content .= $this->generateOpenSwooleService();
+        // Add webserver service
+        $content .= $this->generateWebserverService();
         
         // Add selected services
         foreach ($this->selectedServices as $serviceKey) {
@@ -319,10 +327,12 @@ class DockerComposeInit extends Command
     }
     
     /**
-     * Generate OpenSwoole service configuration
+     * Generate webserver service configuration (OpenSwoole or Apache)
      */
-    private function generateOpenSwooleService(): string
+    private function generateWebserverService(): string
     {
+        $serviceName = $this->webserverType === 'apache' ? 'web' : 'openswoole';
+        $port = $this->webserverPort;
         $dependsOn = [];
         if (in_array('db', $this->selectedServices)) {
             $dependsOn[] = 'db';
@@ -355,13 +365,16 @@ class DockerComposeInit extends Command
                 return "      {$key}: {$value}";
             }, array_keys($environment), $environment));
         
+        // Port mapping based on webserver type
+        $portMapping = $this->webserverType === 'openswoole' ? "{$port}:{$port}" : "{$port}:80";
+        
         return <<<EOT
-  openswoole:
+  {$serviceName}:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "9501:9501"
+      - "{$portMapping}"
     volumes:
       - ./:/var/www/html:delegated
     restart: unless-stopped
@@ -533,7 +546,7 @@ EOT;
             " \033[1;36m$ \033[1;95mdocker-compose logs -f\033[0m",
             "",
             "\033[1;94mService URLs:\033[0m",
-            " • \033[1;36mOpenSwoole\033[0m: http://localhost:9501"
+            " • \033[1;36m" . ucfirst($this->webserverType) . "\033[0m: http://localhost:{$this->webserverPort}"
         ];
         
         if (in_array('phpmyadmin', $this->selectedServices)) {

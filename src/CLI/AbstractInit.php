@@ -679,7 +679,15 @@ EOT;
      */
     protected function offerDockerServices(): void
     {
-        $dockerInit = new DockerComposeInit($this->basePath, $this->nonInteractive);
+        $webserverType = strtolower($this->getWebserverType());
+        $port = $this->getDefaultPort();
+        
+        $dockerInit = new DockerComposeInit(
+            $this->basePath, 
+            $this->nonInteractive, 
+            $webserverType, 
+            $port
+        );
         $dockerInit->offerDockerServices();
     }
     

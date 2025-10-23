@@ -2,7 +2,7 @@
 
 namespace Server\Handlers;
 
-use App\Core\SwooleBootstrap;
+use Gemvc\Core\SwooleBootstrap;
 use Gemvc\Http\SwooleRequest;
 
 /**
@@ -48,7 +48,7 @@ function registerRequestHandler($server): void
             
             // Capture the response using output buffering
             ob_start();
-            $jsonResponse->show();
+            $jsonResponse->showSwoole($response);
             $jsonContent = ob_get_clean();
             
             // Send the JSON response

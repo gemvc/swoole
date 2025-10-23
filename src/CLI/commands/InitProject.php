@@ -46,9 +46,9 @@ class InitProject extends Command
         '3' => [
             'name' => 'Nginx',
             'class' => 'Gemvc\CLI\Commands\InitNginx',
-            'package' => 'gemvc/nginx',
+            'package' => null, // No separate package needed - included in gemvc/swoole
             'description' => 'Modern web server with PHP-FPM',
-            'status' => 'coming_soon',
+            'status' => 'available',
             'icon' => '🔷'
         ]
     ];

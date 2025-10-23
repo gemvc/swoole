@@ -1,2 +1,2 @@
 @echo off
-php "%~dp0gemvc" %* 
+php "%~dp0..endor\bin\gemvc" %*

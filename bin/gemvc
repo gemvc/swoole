@@ -1,4 +1,127 @@
 #!/usr/bin/env php
 <?php
-// Forward to the vendor binary
-require __DIR__ . '/../vendor/bin/gemvc';
+/**
+ * GEMVC CLI Entry Point
+ */
+
+// Find the autoloader
+$autoloadPaths = [
+    __DIR__ . '/../../../autoload.php', // Installed as a dependency
+    __DIR__ . '/../vendor/autoload.php', // Development
+];
+
+$autoloaderFound = false;
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require_once $autoloadPath;
+        $autoloaderFound = true;
+        break;
+    }
+}
+
+if (!$autoloaderFound) {
+    fwrite(STDERR, "Error: Composer autoload.php not found. Please run 'composer install'.\n");
+    exit(1);
+}
+
+use Gemvc\CLI\CommandCategories;
+
+// Parse command line arguments
+$args = array_slice($argv, 1);
+$command = $args[0] ?? 'help';
+
+// Show help if requested
+if ($command === 'help' || $command === '--help' || $command === '-h') {
+    showHelp();
+    exit(0);
+}
+
+// Get command class name
+$commandClass = CommandCategories::getCommandClass($command);
+
+if (empty($commandClass)) {
+    fwrite(STDERR, "Error: Unknown command '{$command}'\n\n");
+    showHelp();
+    exit(1);
+}
+
+$fullClassName = "Gemvc\\CLI\\Commands\\{$commandClass}";
+
+if (!class_exists($fullClassName)) {
+    fwrite(STDERR, "Error: Command class not found: {$fullClassName}\n");
+    exit(1);
+}
+
+// Remove command name from args, keep only parameters
+$commandArgs = array_slice($args, 1);
+$options = [];
+
+// Parse options
+foreach ($commandArgs as $key => $arg) {
+    if (is_string($arg) && strpos($arg, '--') === 0) {
+        if (strpos($arg, '=') !== false) {
+            list($optName, $optValue) = explode('=', substr($arg, 2), 2);
+            $options[$optName] = $optValue;
+        } else {
+            $options[substr($arg, 2)] = true;
+        }
+        unset($commandArgs[$key]);
+    } elseif (is_string($arg) && strpos($arg, '-') === 0 && strlen($arg) > 1) {
+        // Short options like -cmt
+        $flags = str_split(substr($arg, 1));
+        foreach ($flags as $flag) {
+            $options[$flag] = true;
+        }
+        unset($commandArgs[$key]);
+    }
+}
+
+// Reindex array
+$commandArgs = array_values($commandArgs);
+
+// Create and execute command
+try {
+    $commandInstance = new $fullClassName($commandArgs, $options);
+    $success = $commandInstance->execute();
+    exit($success ? 0 : 1);
+} catch (Exception $e) {
+    fwrite(STDERR, "Error: " . $e->getMessage() . "\n");
+    exit(1);
+}
+
+/**
+ * Show help message
+ */
+function showHelp(): void
+{
+    echo "\n";
+    echo "\033[1;96m╔═══════════════════════════════════════════════════════╗\033[0m\n";
+    echo "\033[1;96m║\033[0m              \033[1;92mGEMVC CLI Tool\033[0m                      \033[1;96m║\033[0m\n";
+    echo "\033[1;96m╚═══════════════════════════════════════════════════════╝\033[0m\n";
+    echo "\n";
+    echo "\033[1;93mUsage:\033[0m\n";
+    echo "  gemvc <command> [arguments] [options]\n";
+    echo "\n";
+    
+    $categories = CommandCategories::CATEGORIES;
+    foreach ($categories as $category => $commands) {
+        echo "\033[1;94m{$category}:\033[0m\n";
+        foreach ($commands as $cmd => $description) {
+            echo sprintf("  \033[1;32m%-20s\033[0m %s\n", $cmd, $description);
+        }
+        echo "\n";
+    }
+    
+    echo "\033[1;93mExamples:\033[0m\n";
+    $examples = CommandCategories::getExamples();
+    foreach ($examples as $cmd => $example) {
+        if (is_array($example)) {
+            foreach ($example as $ex) {
+                echo "  \033[90m{$ex}\033[0m\n";
+            }
+        } else {
+            echo "  \033[90m{$example}\033[0m\n";
+        }
+    }
+    echo "\n";
+}
